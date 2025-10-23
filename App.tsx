@@ -26,7 +26,7 @@ declare global {
 // --- Google Drive API Configuration ---
 // هام: يجب استبدال هذه القيم بالقيم الحقيقية من Google Cloud Console
 const GOOGLE_CLIENT_ID = '423555782519-vr5lso45dlckoi1pda01sdc5hcqo1ht9.apps.googleusercontent.com';
-const GOOGLE_API_KEY = process.env.API_KEY || 'AIzaSyC_NANevaRfv8r1-stXEsciACrcbWuSWM8'; 
+const GOOGLE_API_KEY = 'AIzaSyC_NANevaRfv8r1-stXEsciACrcbWuSWM8'; 
 const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
 const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
 const SYNC_FILE_NAME = 'student-activity-data.json';
@@ -450,6 +450,10 @@ const App: React.FC = () => {
     const handleAuthClick = () => {
         if (GOOGLE_CLIENT_ID.startsWith('YOUR_')) {
             addToast('يرجى تكوين Google Client ID أولاً.', 'error');
+            return;
+        }
+        if (!GOOGLE_API_KEY) {
+            addToast('مفتاح API غير متوفر. لا يمكن تهيئة المزامنة.', 'error');
             return;
         }
         tokenClientRef.current?.requestAccessToken({ prompt: '' });
