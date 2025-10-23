@@ -25,8 +25,8 @@ declare global {
 
 // --- Google Drive API Configuration ---
 // هام: يجب استبدال هذه القيم بالقيم الحقيقية من Google Cloud Console
-const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
-const GOOGLE_API_KEY = process.env.API_KEY || 'YOUR_GOOGLE_API_KEY'; 
+const GOOGLE_CLIENT_ID = '423555782519-vr5lso45dlckoi1pda01sdc5hcqo1ht9.apps.googleusercontent.com';
+const GOOGLE_API_KEY = process.env.API_KEY || 'AIzaSyC_NANevaRfv8r1-stXEsciACrcbWuSWM8'; 
 const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
 const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
 const SYNC_FILE_NAME = 'student-activity-data.json';
