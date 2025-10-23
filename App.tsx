@@ -26,7 +26,6 @@ declare global {
 // --- Google Drive API Configuration ---
 // هام: يجب استبدال هذه القيم بالقيم الحقيقية من Google Cloud Console
 const GOOGLE_CLIENT_ID = '423555782519-vr5lso45dlckoi1pda01sdc5hcqo1ht9.apps.googleusercontent.com';
-const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
 const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
 const SYNC_FILE_NAME = 'student-activity-data.json';
 // ---
@@ -153,6 +152,7 @@ const App: React.FC = () => {
 
     const [gapiReady, setGapiReady] = useState(false);
     const [gisReady, setGisReady] = useState(false);
+    const [gapiClientReady, setGapiClientReady] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
     const [userProfile, setUserProfile] = useState<{ name: string; email: string; } | null>(null);
@@ -160,7 +160,7 @@ const App: React.FC = () => {
     const tokenClientRef = useRef<any>(null);
     // Fix: Changed NodeJS.Timeout to number, which is the correct return type for setTimeout in a browser environment.
     const debounceTimeoutRef = useRef<number | null>(null);
-    const isSyncEnabled = gapiReady && gisReady;
+    const isSyncEnabled = gapiClientReady && gisReady;
     
     // --- CALLBACKS & HELPER FUNCTIONS ---
 
@@ -236,25 +236,32 @@ const App: React.FC = () => {
     const loadDataFromDrive = useCallback(async () => {
         setSyncStatus('syncing');
         try {
-            const response = await window.gapi.client.drive.files.list({
-                spaces: 'appDataFolder',
-                fields: 'files(id, name)',
-                q: `name='${SYNC_FILE_NAME}'`,
+            const listResponse = await window.gapi.client.request({
+                'path': 'https://www.googleapis.com/drive/v3/files',
+                'params': {
+                    'spaces': 'appDataFolder',
+                    'fields': 'files(id, name)',
+                    'q': `name='${SYNC_FILE_NAME}'`,
+                }
             });
 
-            if (response.result.files.length > 0) {
-                fileIdRef.current = response.result.files[0].id;
-                const fileResponse = await window.gapi.client.drive.files.get({
-                    fileId: fileIdRef.current,
-                    alt: 'media',
+            const files = listResponse.result.files;
+            if (files && files.length > 0) {
+                fileIdRef.current = files[0].id;
+                const fileResponse = await window.gapi.client.request({
+                    'path': `https://www.googleapis.com/drive/v3/files/${fileIdRef.current}`,
+                    'params': { 'alt': 'media' },
                 });
                 
                 const data = fileResponse.result;
-                if (data.links && data.themeConfig && data.adminPassword) {
+                if (data && data.links && data.themeConfig && data.adminPassword) {
                     setLinks(data.links);
                     setThemeConfig(data.themeConfig);
                     setAdminPassword(data.adminPassword);
                     addToast('تم استعادة البيانات من Google Drive بنجاح.');
+                } else {
+                    addToast('تم العثور على ملف مزامنة، ولكن البيانات غير مكتملة. سيتم الكتابة فوقه.');
+                    saveDataToDrive();
                 }
             } else {
                 addToast('لا يوجد ملف مزامنة. سيتم إنشاء واحد جديد.');
@@ -305,12 +312,9 @@ const App: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        if (gapiReady && process.env.API_KEY) {
-            window.gapi.load('client', async () => {
-                await window.gapi.client.init({
-                    apiKey: process.env.API_KEY,
-                    discoveryDocs: DISCOVERY_DOCS,
-                });
+        if (gapiReady) {
+            window.gapi.load('client', () => {
+                setGapiClientReady(true);
             });
         }
     }, [gapiReady]);
@@ -453,10 +457,6 @@ const App: React.FC = () => {
     const handleAuthClick = () => {
         if (GOOGLE_CLIENT_ID.startsWith('YOUR_')) {
             addToast('يرجى تكوين Google Client ID أولاً.', 'error');
-            return;
-        }
-        if (!process.env.API_KEY) {
-            addToast('مفتاح API غير متوفر. لا يمكن تهيئة المزامنة.', 'error');
             return;
         }
         tokenClientRef.current?.requestAccessToken({ prompt: '' });
