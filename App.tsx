@@ -26,7 +26,6 @@ declare global {
 // --- Google Drive API Configuration ---
 // هام: يجب استبدال هذه القيم بالقيم الحقيقية من Google Cloud Console
 const GOOGLE_CLIENT_ID = '423555782519-vr5lso45dlckoi1pda01sdc5hcqo1ht9.apps.googleusercontent.com';
-const GOOGLE_API_KEY = 'AIzaSyC_NANevaRfv8r1-stXEsciACrcbWuSWM8'; 
 const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
 const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
 const SYNC_FILE_NAME = 'student-activity-data.json';
@@ -182,10 +181,14 @@ const App: React.FC = () => {
             const delimiter = "\r\n--" + boundary + "\r\n";
             const close_delim = "\r\n--" + boundary + "--";
 
-            const metadata = {
-                'name': SYNC_FILE_NAME,
-                'mimeType': 'application/json',
-            };
+            // FIX: The metadata for creating a file MUST specify `parents: ['appDataFolder']`.
+            const metadata = fileIdRef.current 
+                ? { 'mimeType': 'application/json' } 
+                : {
+                    'name': SYNC_FILE_NAME,
+                    'mimeType': 'application/json',
+                    'parents': ['appDataFolder'],
+                  };
 
             const multipartRequestBody =
                 delimiter +
@@ -302,10 +305,10 @@ const App: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        if (gapiReady) {
+        if (gapiReady && process.env.API_KEY) {
             window.gapi.load('client', async () => {
                 await window.gapi.client.init({
-                    apiKey: GOOGLE_API_KEY,
+                    apiKey: process.env.API_KEY,
                     discoveryDocs: DISCOVERY_DOCS,
                 });
             });
@@ -452,7 +455,7 @@ const App: React.FC = () => {
             addToast('يرجى تكوين Google Client ID أولاً.', 'error');
             return;
         }
-        if (!GOOGLE_API_KEY) {
+        if (!process.env.API_KEY) {
             addToast('مفتاح API غير متوفر. لا يمكن تهيئة المزامنة.', 'error');
             return;
         }
