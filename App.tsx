@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { LinkItem, UserRole, ToastMessage, ThemeConfig } from './types';
 import Header from './components/Header';
 import LinkList from './components/LinkList';
@@ -13,22 +13,8 @@ import ToastContainer from './components/ToastContainer';
 import SearchBar from './components/SearchBar';
 import { ThemeIcon } from './components/icons/ThemeIcon';
 import ThemeModal from './components/ThemeModal';
-import { GoogleDriveIcon } from './components/icons/GoogleDriveIcon';
-
-// Fix: Add declarations for gapi and google on the window object to resolve TypeScript errors.
-declare global {
-    interface Window {
-        gapi: any;
-        google: any;
-    }
-}
-
-// --- Google Drive API Configuration ---
-// هام: يجب استبدال هذه القيم بالقيم الحقيقية من Google Cloud Console
-const GOOGLE_CLIENT_ID = '423555782519-vr5lso45dlckoi1pda01sdc5hcqo1ht9.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
-const SYNC_FILE_NAME = 'student-activity-data.json';
-// ---
+import { ExportIcon } from './components/icons/ExportIcon';
+import { ImportIcon } from './components/icons/ImportIcon';
 
 export const themePresets: { [key: string]: { name: string; settings: { [key: string]: string } } } = {
   default: {
@@ -150,17 +136,6 @@ const App: React.FC = () => {
     const [toasts, setToasts] = useState<ToastMessage[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const [gapiReady, setGapiReady] = useState(false);
-    const [gisReady, setGisReady] = useState(false);
-    const [gapiClientReady, setGapiClientReady] = useState(false);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
-    const [userProfile, setUserProfile] = useState<{ name: string; email: string; } | null>(null);
-    const fileIdRef = useRef<string | null>(null);
-    const tokenClientRef = useRef<any>(null);
-    // Fix: Changed NodeJS.Timeout to number, which is the correct return type for setTimeout in a browser environment.
-    const debounceTimeoutRef = useRef<number | null>(null);
-    const isSyncEnabled = gapiClientReady && gisReady;
     
     // --- CALLBACKS & HELPER FUNCTIONS ---
 
@@ -169,188 +144,17 @@ const App: React.FC = () => {
         setToasts(prevToasts => [...prevToasts, { id, message, type }]);
     }, []);
 
-    const saveDataToDrive = useCallback(() => {
-        if (!isLoggedIn) return;
-
-        if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
-
-        debounceTimeoutRef.current = window.setTimeout(async () => {
-            setSyncStatus('syncing');
-            const appData = { links, themeConfig, adminPassword };
-            const boundary = '-------314159265358979323846';
-            const delimiter = "\r\n--" + boundary + "\r\n";
-            const close_delim = "\r\n--" + boundary + "--";
-
-            // FIX: The metadata for creating a file MUST specify `parents: ['appDataFolder']`.
-            const metadata = fileIdRef.current 
-                ? { 'mimeType': 'application/json' } 
-                : {
-                    'name': SYNC_FILE_NAME,
-                    'mimeType': 'application/json',
-                    'parents': ['appDataFolder'],
-                  };
-
-            const multipartRequestBody =
-                delimiter +
-                'Content-Type: application/json\r\n\r\n' +
-                JSON.stringify(metadata) +
-                delimiter +
-                'Content-Type: application/json\r\n\r\n' +
-                JSON.stringify(appData) +
-                close_delim;
-            
-            try {
-                const path = fileIdRef.current
-                    ? `/upload/drive/v3/files/${fileIdRef.current}`
-                    : '/upload/drive/v3/files';
-                
-                const method = fileIdRef.current ? 'PATCH' : 'POST';
-
-                const params = fileIdRef.current 
-                    ? { uploadType: 'multipart' }
-                    : { uploadType: 'multipart', fields: 'id' };
-
-                const request = window.gapi.client.request({
-                    'path': path,
-                    'method': method,
-                    'params': params,
-                    'headers': {
-                        'Content-Type': 'multipart/related; boundary="' + boundary + '"'
-                    },
-                    'body': multipartRequestBody
-                });
-
-                const response = await request;
-                if (!fileIdRef.current) {
-                    fileIdRef.current = response.result.id;
-                }
-                setSyncStatus('success');
-            } catch (error) {
-                console.error('Failed to save data to drive', error);
-                addToast('فشلت المزامنة مع Google Drive.', 'error');
-                setSyncStatus('error');
-            }
-        }, 1500);
-    }, [isLoggedIn, links, themeConfig, adminPassword, addToast]);
     
-    const loadDataFromDrive = useCallback(async () => {
-        setSyncStatus('syncing');
-        try {
-            const listResponse = await window.gapi.client.request({
-                'path': 'https://www.googleapis.com/drive/v3/files',
-                'params': {
-                    'spaces': 'appDataFolder',
-                    'fields': 'files(id, name)',
-                    'q': `name='${SYNC_FILE_NAME}'`,
-                }
-            });
-
-            const files = listResponse.result.files;
-            if (files && files.length > 0) {
-                fileIdRef.current = files[0].id;
-                const fileResponse = await window.gapi.client.request({
-                    'path': `https://www.googleapis.com/drive/v3/files/${fileIdRef.current}`,
-                    'params': { 'alt': 'media' },
-                });
-                
-                const data = fileResponse.result;
-                if (data && data.links && data.themeConfig && data.adminPassword) {
-                    setLinks(data.links);
-                    setThemeConfig(data.themeConfig);
-                    setAdminPassword(data.adminPassword);
-                    addToast('تم استعادة البيانات من Google Drive بنجاح.');
-                } else {
-                    addToast('تم العثور على ملف مزامنة، ولكن البيانات غير مكتملة. سيتم الكتابة فوقه.');
-                    saveDataToDrive();
-                }
-            } else {
-                addToast('لا يوجد ملف مزامنة. سيتم إنشاء واحد جديد.');
-                saveDataToDrive();
-            }
-            setSyncStatus('success');
-        } catch (error) {
-            console.error('Failed to load data from drive', error);
-            addToast('فشل تحميل البيانات من Google Drive.', 'error');
-            setSyncStatus('error');
-        }
-    }, [addToast, saveDataToDrive]);
-
-    const loadUserProfile = useCallback(async () => {
-        try {
-            const response = await window.gapi.client.request({
-                path: 'https://www.googleapis.com/oauth2/v2/userinfo',
-            });
-            setUserProfile({
-                name: response.result.name,
-                email: response.result.email,
-            });
-        } catch (error) {
-            console.error('Failed to load user profile', error);
-        }
-    }, []);
-
     // --- EFFECTS ---
-
-    useEffect(() => {
-        const checkGapi = setInterval(() => {
-            if (window.gapi) {
-                setGapiReady(true);
-                clearInterval(checkGapi);
-            }
-        }, 100);
-        const checkGis = setInterval(() => {
-            if (window.google) {
-                setGisReady(true);
-                clearInterval(checkGis);
-            }
-        }, 100);
-
-        return () => {
-            clearInterval(checkGapi);
-            clearInterval(checkGis);
-        };
-    }, []);
-
-    useEffect(() => {
-        if (gapiReady) {
-            window.gapi.load('client', () => {
-                setGapiClientReady(true);
-            });
-        }
-    }, [gapiReady]);
-
-    useEffect(() => {
-        if (gisReady) {
-            tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
-                client_id: GOOGLE_CLIENT_ID,
-                scope: SCOPES,
-                callback: (tokenResponse: any) => {
-                    if (tokenResponse.error) {
-                        addToast(`خطأ في المصادقة: ${tokenResponse.error}`, 'error');
-                        return;
-                    }
-                    window.gapi.client.setToken(tokenResponse);
-                    setIsLoggedIn(true);
-                    addToast('تم الربط مع Google Drive بنجاح.');
-                    loadUserProfile();
-                    loadDataFromDrive();
-                },
-            });
-        }
-    }, [gisReady, addToast, loadUserProfile, loadDataFromDrive]);
-
     useEffect(() => {
         try {
             localStorage.setItem('studentActivityLinks', JSON.stringify(links));
             localStorage.setItem('studentActivityTheme', JSON.stringify(themeConfig));
             localStorage.setItem('studentActivityPassword', adminPassword);
-            if (isLoggedIn) {
-                saveDataToDrive();
-            }
         } catch (error) {
             console.error("Failed to save to localStorage", error);
         }
-    }, [links, themeConfig, adminPassword, isLoggedIn, saveDataToDrive]);
+    }, [links, themeConfig, adminPassword]);
     
     useEffect(() => {
         try {
@@ -367,6 +171,63 @@ const App: React.FC = () => {
     }, [themeConfig]);
     
     // --- EVENT HANDLERS ---
+    const handleExport = () => {
+        try {
+            const appData = {
+                links,
+                themeConfig,
+                adminPassword,
+            };
+            const jsonString = JSON.stringify(appData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'student-activity-data.json';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            addToast('تم تصدير الإعدادات بنجاح.');
+        } catch (error) {
+            console.error('Failed to export data', error);
+            addToast('حدث خطأ أثناء تصدير الإعدادات.', 'error');
+        }
+    };
+
+    const handleImport = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = (event) => {
+            const file = (event.target as HTMLInputElement).files?.[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const result = e.target?.result;
+                        if (typeof result === 'string') {
+                            const data = JSON.parse(result);
+                            // Basic validation
+                            if (data && Array.isArray(data.links) && data.themeConfig && typeof data.adminPassword === 'string') {
+                                setLinks(data.links);
+                                setThemeConfig(data.themeConfig);
+                                setAdminPassword(data.adminPassword);
+                                addToast('تم استيراد الإعدادات بنجاح.');
+                            } else {
+                                throw new Error('Invalid file structure.');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Failed to parse imported file', error);
+                        addToast('فشل استيراد الملف. تأكد من أن الملف صحيح.', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        };
+        input.click();
+    };
 
     const removeToast = (id: number) => {
         setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
@@ -454,42 +315,12 @@ const App: React.FC = () => {
         addToast('تم تحديث مظهر الموقع بنجاح!');
     };
     
-    const handleAuthClick = () => {
-        if (GOOGLE_CLIENT_ID.startsWith('YOUR_')) {
-            addToast('يرجى تكوين Google Client ID أولاً.', 'error');
-            return;
-        }
-        tokenClientRef.current?.requestAccessToken({ prompt: '' });
-    };
-
-    const handleSignoutClick = () => {
-        const token = window.gapi.client.getToken();
-        if (token) {
-            window.google.accounts.oauth2.revoke(token.access_token, () => {});
-            window.gapi.client.setToken(null);
-        }
-        setIsLoggedIn(false);
-        setUserProfile(null);
-        fileIdRef.current = null;
-        setSyncStatus('idle');
-        addToast('تم تسجيل الخروج من Google Drive.');
-    };
-    
     // --- RENDER LOGIC ---
 
     const filteredLinks = links.filter(link =>
         link.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         link.description?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-
-    const getSyncStatusMessage = () => {
-        switch (syncStatus) {
-            case 'syncing': return 'جاري المزامنة...';
-            case 'success': return 'تمت المزامنة بنجاح';
-            case 'error': return 'فشلت المزامنة';
-            default: return userProfile ? `متصل كـ ${userProfile.email}` : 'غير متصل';
-        }
-    };
 
     return (
         <div className="min-h-screen p-4 sm:p-6 md:p-8">
@@ -506,7 +337,7 @@ const App: React.FC = () => {
                 <main>
                     <div className="mb-8">
                         <SearchBar value={searchQuery} onChange={setSearchQuery} />
-                    </div>
+                    }
 
                     {userRole === 'admin' && (
                         <div className="mb-8 flex flex-col items-center gap-4">
@@ -534,32 +365,27 @@ const App: React.FC = () => {
                                 </button>
                             </div>
                             
-                            <div className="w-full max-w-md p-4 mt-4 rounded-lg bg-[var(--color-card-bg)] border border-[var(--color-border)] text-center">
-                                <h3 className="font-bold text-lg mb-2 text-[var(--color-text-primary)]">المزامنة مع Google Drive</h3>
-                                {!isSyncEnabled ? (
-                                    <p className="text-sm text-[var(--color-text-secondary)]">جاري تحميل أداة المزامنة...</p>
-                                ) : !isLoggedIn ? (
-                                    <>
-                                        <p className="text-sm text-[var(--color-text-secondary)] mb-4">احفظ إعداداتك وبياناتك تلقائياً عبر الأجهزة.</p>
-                                        <button 
-                                            onClick={handleAuthClick}
-                                            className="w-full inline-flex items-center justify-center gap-3 px-4 py-2 bg-white text-gray-700 font-semibold rounded-md hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-card-bg)] focus:ring-blue-500 shadow-md"
-                                        >
-                                            <GoogleDriveIcon className="w-5 h-5" />
-                                            <span>الربط مع Google Drive</span>
-                                        </button>
-                                    </>
-                                ) : (
-                                    <div className="flex flex-col items-center gap-3">
-                                        <p className="text-sm text-[var(--color-text-secondary)]">{getSyncStatusMessage()}</p>
-                                        <button 
-                                            onClick={handleSignoutClick}
-                                            className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-accent)] transition-colors underline"
-                                        >
-                                            تسجيل الخروج
-                                        </button>
-                                    </div>
-                                )}
+                           <div className="w-full max-w-md p-4 mt-4 rounded-lg bg-[var(--color-card-bg)] border border-[var(--color-border)] text-center">
+                                <h3 className="font-bold text-lg mb-2 text-[var(--color-text-primary)]">إدارة البيانات</h3>
+                                <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+                                    حفظ أو استعادة جميع إعدادات الموقع من ملف واحد.
+                                </p>
+                                <div className="flex gap-4">
+                                    <button 
+                                        onClick={handleImport}
+                                        className="w-full inline-flex items-center justify-center gap-3 px-4 py-2 bg-sky-600 text-white font-semibold rounded-md hover:bg-sky-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-card-bg)] focus:ring-sky-500 shadow-md"
+                                    >
+                                        <ImportIcon className="w-5 h-5" />
+                                        <span>استيراد الإعدادات</span>
+                                    </button>
+                                     <button 
+                                        onClick={handleExport}
+                                        className="w-full inline-flex items-center justify-center gap-3 px-4 py-2 bg-emerald-600 text-white font-semibold rounded-md hover:bg-emerald-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-card-bg)] focus:ring-emerald-500 shadow-md"
+                                    >
+                                        <ExportIcon className="w-5 h-5" />
+                                        <span>تصدير الإعدادات</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
