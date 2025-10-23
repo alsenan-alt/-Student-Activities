@@ -5,6 +5,7 @@ export interface LinkItem {
   title: string;
   url: string;
   icon: string;
+  description?: string;
 }
 
 export type ToastType = 'success' | 'error' | 'info';

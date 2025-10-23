@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { LinkItem, UserRole, ToastMessage, ThemeConfig } from './types';
 import Header from './components/Header';
 import LinkList from './components/LinkList';
@@ -13,6 +13,8 @@ import ToastContainer from './components/ToastContainer';
 import SearchBar from './components/SearchBar';
 import { ThemeIcon } from './components/icons/ThemeIcon';
 import ThemeModal from './components/ThemeModal';
+import { ExportIcon } from './components/icons/ExportIcon';
+import { ImportIcon } from './components/icons/ImportIcon';
 
 export const themePresets: { [key: string]: { name: string; settings: { [key: string]: string } } } = {
   default: {
@@ -86,6 +88,8 @@ export const themePresets: { [key: string]: { name: string; settings: { [key: st
 
 const App: React.FC = () => {
     
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    
     const getInitialLinks = (): LinkItem[] => {
         try {
             const savedLinks = localStorage.getItem('studentActivityLinks');
@@ -96,9 +100,9 @@ const App: React.FC = () => {
             console.error("Failed to parse links from localStorage", error);
         }
         return [
-            { id: 1, title: 'نموذج تسجيل الأنشطة', url: 'https://forms.example.com/registration', icon: 'document' },
-            { id: 2, title: 'جدول الفعاليات', url: 'https://calendar.example.com/events', icon: 'calendar' },
-            { id: 3, title: 'تواصل مع المشرف', url: 'https://contact.example.com/supervisor', icon: 'chat' },
+            { id: 1, title: 'نموذج تسجيل الأنشطة', url: 'https://forms.example.com/registration', icon: 'document', description: 'استخدم هذا النموذج لتسجيل اسمك في الأنشطة الطلابية المتاحة.' },
+            { id: 2, title: 'جدول الفعاليات', url: 'https://calendar.example.com/events', icon: 'calendar', description: 'اطلع على جدول ومواعيد جميع الفعاليات والأنشطة القادمة.' },
+            { id: 3, title: 'تواصل مع المشرف', url: 'https://contact.example.com/supervisor', icon: 'chat', description: 'قناة مباشرة للتواصل مع مشرف النشاط للإجابة على استفساراتكم.' },
         ];
     };
 
@@ -172,11 +176,11 @@ const App: React.FC = () => {
         setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
     };
 
-    const handleSaveLink = (id: number | null, title: string, url: string, icon: string) => {
+    const handleSaveLink = (id: number | null, title: string, url: string, icon: string, description: string) => {
         if (id !== null) { // Update existing link
             setLinks(prevLinks =>
                 prevLinks.map(link =>
-                    link.id === id ? { ...link, title, url, icon } : link
+                    link.id === id ? { ...link, title, url, icon, description } : link
                 )
             );
             addToast('تم تحديث الرابط بنجاح!');
@@ -186,6 +190,7 @@ const App: React.FC = () => {
                 title,
                 url,
                 icon,
+                description,
             };
             setLinks(prevLinks => [...prevLinks, newLink]);
             addToast('تمت إضافة الرابط بنجاح!');
@@ -253,13 +258,99 @@ const App: React.FC = () => {
         addToast('تم تحديث مظهر الموقع بنجاح!');
     };
 
+    const handleExport = () => {
+        try {
+            const exportData = {
+                links,
+                themeConfig,
+                adminPassword,
+            };
+            const jsonString = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const href = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = href;
+            const date = new Date().toISOString().slice(0, 10);
+            link.download = `student-activity-config-${date}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(href);
+            addToast('تم تصدير الإعدادات بنجاح!');
+        } catch (error) {
+            console.error("Failed to export settings", error);
+            addToast('فشل تصدير الإعدادات.', 'error');
+        }
+    };
+
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) {
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target?.result;
+                if (typeof text !== 'string') {
+                    throw new Error('محتوى الملف غير قابل للقراءة.');
+                }
+                const importedData = JSON.parse(text);
+
+                if (
+                    !importedData.links || 
+                    !importedData.themeConfig || 
+                    !importedData.adminPassword ||
+                    !Array.isArray(importedData.links)
+                ) {
+                    throw new Error('ملف الإعدادات غير صالح أو تالف.');
+                }
+                
+                setLinks(importedData.links);
+                setThemeConfig(importedData.themeConfig);
+                setAdminPassword(importedData.adminPassword);
+
+                addToast('تم استيراد الإعدادات بنجاح!');
+            } catch (error) {
+                console.error("Failed to import settings", error);
+                const errorMessage = error instanceof Error ? error.message : 'فشل استيراد الإعدادات. الرجاء التأكد من أن الملف صحيح.';
+                addToast(errorMessage, 'error');
+            } finally {
+                if (event.target) {
+                    event.target.value = '';
+                }
+            }
+        };
+        reader.onerror = () => {
+             addToast('حدث خطأ أثناء قراءة الملف.', 'error');
+             if (event.target) {
+                event.target.value = '';
+            }
+        };
+        reader.readAsText(file);
+    };
+
     const filteredLinks = links.filter(link =>
-        link.title.toLowerCase().includes(searchQuery.toLowerCase())
+        link.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        link.description?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
 
     return (
         <div className="min-h-screen p-4 sm:p-6 md:p-8">
+             <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".json"
+                style={{ display: 'none' }}
+                aria-hidden="true"
+            />
             <ToastContainer toasts={toasts} onDismiss={removeToast} />
             <div className="container mx-auto max-w-5xl">
                 <Header 
@@ -297,6 +388,20 @@ const App: React.FC = () => {
                             >
                                 <ThemeIcon className="w-5 h-5" />
                                 <span>تخصيص المظهر</span>
+                            </button>
+                             <button
+                                onClick={handleImportClick}
+                                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-card-bg)] text-[var(--color-text-primary)] font-semibold rounded-md hover:brightness-125 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-text-secondary)] shadow-lg transform hover:-translate-y-0.5"
+                            >
+                                <ImportIcon className="w-5 h-5" />
+                                <span>استيراد الإعدادات</span>
+                            </button>
+                            <button
+                                onClick={handleExport}
+                                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-card-bg)] text-[var(--color-text-primary)] font-semibold rounded-md hover:brightness-125 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-text-secondary)] shadow-lg transform hover:-translate-y-0.5"
+                            >
+                                <ExportIcon className="w-5 h-5" />
+                                <span>تصدير الإعدادات</span>
                             </button>
                         </div>
                     )}

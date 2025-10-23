@@ -4,7 +4,7 @@ import { PlusIcon } from './icons/PlusIcon';
 import { availableIcons } from './icons/iconMap';
 
 interface AddLinkFormProps {
-  onSave: (id: number | null, title: string, url: string, icon: string) => void;
+  onSave: (id: number | null, title: string, url: string, icon: string, description: string) => void;
   onClose: () => void;
   existingLink?: LinkItem | null;
 }
@@ -12,6 +12,7 @@ interface AddLinkFormProps {
 const AddLinkForm: React.FC<AddLinkFormProps> = ({ onSave, onClose, existingLink }) => {
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
+  const [description, setDescription] = useState('');
   const [selectedIcon, setSelectedIcon] = useState<string>(availableIcons[0].id);
   const [error, setError] = useState('');
 
@@ -21,6 +22,7 @@ const AddLinkForm: React.FC<AddLinkFormProps> = ({ onSave, onClose, existingLink
     if (isEditing) {
       setTitle(existingLink.title);
       setUrl(existingLink.url);
+      setDescription(existingLink.description || '');
       setSelectedIcon(existingLink.icon);
     }
   }, [existingLink, isEditing]);
@@ -38,7 +40,7 @@ const AddLinkForm: React.FC<AddLinkFormProps> = ({ onSave, onClose, existingLink
       return;
     }
     setError('');
-    onSave(isEditing ? existingLink.id : null, title, url, selectedIcon);
+    onSave(isEditing ? existingLink.id : null, title, url, selectedIcon, description);
   };
 
   return (
@@ -65,6 +67,18 @@ const AddLinkForm: React.FC<AddLinkFormProps> = ({ onSave, onClose, existingLink
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             className="w-full px-4 py-3 bg-[var(--color-bg)] border-2 border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)] transition-colors text-[var(--color-text-primary)]"
+          />
+        </div>
+
+        <div>
+           <label htmlFor="link-description" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">وصف الرابط (اختياري)</label>
+          <textarea
+            id="link-description"
+            placeholder="أضف وصفاً قصيراً يوضح الغرض من هذا الرابط..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            className="w-full px-4 py-3 bg-[var(--color-bg)] border-2 border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)] transition-colors text-[var(--color-text-primary)] resize-y"
           />
         </div>
         
