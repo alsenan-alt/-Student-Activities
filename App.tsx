@@ -15,14 +15,9 @@ import { ThemeIcon } from './components/icons/ThemeIcon';
 import ThemeModal from './components/ThemeModal';
 import { ExportIcon } from './components/icons/ExportIcon';
 import { ImportIcon } from './components/icons/ImportIcon';
+import DataSourceStatus from './components/DataSourceStatus';
 
-// ====================================================================================
-// !! هام جداً: ضع رابط GitHub Gist Raw URL الذي نسخته هنا !!
-// ====================================================================================
-const DATA_SOURCE_URL = 'https://gist.githubusercontent.com/ahmedtaha2020/08551184370715a565e8322b6d633349/raw/student-activity-data.json'; 
-// مثال: 'https://gist.githubusercontent.com/your-name/12345abc/raw/student-activity-data.json'
-// ====================================================================================
-
+const DATA_SOURCE_URL = 'https://gist.githubusercontent.com/alsenan-alt/90667b2526764f93d35e6328b72d0c4b/raw/472a8518b372d43a0bca4cc8fea0e55b71c74ed9/student-activity-data.json'; 
 
 export const themePresets: { [key: string]: { name: string; settings: { [key: string]: string } } } = {
   default: {
@@ -125,6 +120,7 @@ const App: React.FC = () => {
     const [toasts, setToasts] = useState<ToastMessage[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [fetchError, setFetchError] = useState<string | null>(null);
 
     // --- CALLBACKS & HELPER FUNCTIONS ---
     const addToast = useCallback((message: string, type: ToastMessage['type'] = 'success') => {
@@ -137,26 +133,41 @@ const App: React.FC = () => {
     // Effect for loading initial data
     useEffect(() => {
         const loadInitialData = async () => {
+            let errorMessage: string | null = null;
             try {
-                // Priority 1: Fetch from GitHub Gist for fresh data
-                if (DATA_SOURCE_URL && !DATA_SOURCE_URL.includes('YOUR_RAW_GIST_URL_HERE')) {
+                if (DATA_SOURCE_URL) {
                     const response = await fetch(`${DATA_SOURCE_URL}?cachebust=${new Date().getTime()}`);
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    
-                    const serverData = await response.json();
-                    if (serverData && serverData.links && serverData.themeConfig) {
-                        setLinks(serverData.links);
-                        setThemeConfig(serverData.themeConfig);
-                        setAdminPassword(serverData.adminPassword || 'admin');
-                        localStorage.setItem('studentActivityData', JSON.stringify(serverData));
-                        return;
+                    if (!response.ok) {
+                        if (response.status === 404) {
+                            errorMessage = 'فشل الاتصال: لم يتم العثور على الملف على الرابط (خطأ 404). الرجاء التأكد من صحة الرابط.';
+                        } else {
+                            errorMessage = `فشل الاتصال بالخادم (خطأ ${response.status}).`;
+                        }
+                    } else {
+                        const serverData = await response.json();
+                        if (serverData && serverData.links && serverData.themeConfig) {
+                            setLinks(serverData.links);
+                            setThemeConfig(serverData.themeConfig);
+                            setAdminPassword(serverData.adminPassword || 'admin');
+                            localStorage.setItem('studentActivityData', JSON.stringify(serverData));
+                            console.log("Data loaded successfully from Gist.");
+                            setFetchError(null);
+                            return;
+                        } else {
+                           errorMessage = 'البيانات المستلمة من الرابط غير صالحة.';
+                        }
                     }
                 } else {
-                     console.warn("DATA_SOURCE_URL is not configured. Please set it at the top of App.tsx.");
+                    errorMessage = 'لم يتم تكوين رابط مصدر البيانات. يتم عرض البيانات المحلية.';
                 }
             } catch (error) {
-                console.error("فشل جلب البيانات من المصدر الخارجي (Gist). سيتم الاعتماد على النسخة المحلية.", error);
-                addToast("تعذر الوصول للبيانات المحدثة. سيتم عرض آخر نسخة محفوظة.", "error");
+                console.error("Could not fetch/parse server data, falling back to local.", error);
+                errorMessage = 'حدث خطأ في الشبكة أو في تحليل البيانات. سيتم عرض آخر نسخة محفوظة.';
+            }
+
+            if (errorMessage) {
+                setFetchError(errorMessage);
+                addToast(errorMessage, "error");
             }
 
             // Priority 2: Fallback to localStorage
@@ -168,6 +179,7 @@ const App: React.FC = () => {
                         setLinks(localData.links);
                         setThemeConfig(localData.themeConfig);
                         setAdminPassword(localData.adminPassword || 'admin');
+                         console.log("Data loaded successfully from localStorage.");
                         return;
                     }
                 }
@@ -176,6 +188,7 @@ const App: React.FC = () => {
             }
 
             // Priority 3: Fallback to hardcoded defaults
+            console.log("Falling back to default data.");
             setLinks(DEFAULT_DATA.links);
             setThemeConfig(DEFAULT_DATA.themeConfig);
             setAdminPassword(DEFAULT_DATA.adminPassword);
@@ -380,6 +393,7 @@ const App: React.FC = () => {
 
                     {userRole === 'admin' && (
                         <div className="mb-8 flex flex-col items-center gap-6">
+                            <DataSourceStatus url={DATA_SOURCE_URL} isLoading={isLoading} error={fetchError} />
                             <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-4">
                                 <button
                                     onClick={openAddForm}
