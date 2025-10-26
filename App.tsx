@@ -19,7 +19,7 @@ import { ImportIcon } from './components/icons/ImportIcon';
 // ====================================================================================
 // !! هام جداً: ضع رابط GitHub Gist Raw URL الذي نسخته هنا !!
 // ====================================================================================
-const DATA_SOURCE_URL = 'YOUR_RAW_GIST_URL_HERE'; 
+const DATA_SOURCE_URL = 'https://gist.githubusercontent.com/ahmedtaha2020/08551184370715a565e8322b6d633349/raw/student-activity-data.json'; 
 // مثال: 'https://gist.githubusercontent.com/your-name/12345abc/raw/student-activity-data.json'
 // ====================================================================================
 
@@ -155,8 +155,8 @@ const App: React.FC = () => {
                      console.warn("DATA_SOURCE_URL is not configured. Please set it at the top of App.tsx.");
                 }
             } catch (error) {
-                console.error("Could not fetch server data, falling back to local.", error);
-                addToast("فشل تحميل البيانات من المصدر الخارجي.", "error");
+                console.error("فشل جلب البيانات من المصدر الخارجي (Gist). سيتم الاعتماد على النسخة المحلية.", error);
+                addToast("تعذر الوصول للبيانات المحدثة. سيتم عرض آخر نسخة محفوظة.", "error");
             }
 
             // Priority 2: Fallback to localStorage
