@@ -15,15 +15,6 @@ import { ThemeIcon } from './components/icons/ThemeIcon';
 import ThemeModal from './components/ThemeModal';
 import { ExportIcon } from './components/icons/ExportIcon';
 import { ImportIcon } from './components/icons/ImportIcon';
-import { GoogleDriveIcon } from './components/icons/GoogleDriveIcon';
-
-// Extend window type for gapi and google
-declare global {
-    interface Window {
-        gapi: any;
-        google: any;
-    }
-}
 
 // ====================================================================================
 // !! هام جداً: ضع رابط GitHub Gist Raw URL الذي نسخته هنا !!
@@ -120,9 +111,6 @@ const DEFAULT_DATA = {
     adminPassword: 'admin'
 };
 
-const DRIVE_FILE_NAME = 'student-activity-data.json';
-const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
-
 const App: React.FC = () => {
     // --- STATE & REFS ---
     const [links, setLinks] = useState<LinkItem[]>([]);
@@ -138,157 +126,11 @@ const App: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(true);
 
-    // Google Drive State
-    const [gapiReady, setGapiReady] = useState(false);
-    const [gisReady, setGisReady] = useState(false);
-    const [tokenClient, setTokenClient] = useState<any>(null);
-    const [isDriveAuthed, setIsDriveAuthed] = useState(false);
-    const [driveFileId, setDriveFileId] = useState<string | null>(null);
-    
     // --- CALLBACKS & HELPER FUNCTIONS ---
     const addToast = useCallback((message: string, type: ToastMessage['type'] = 'success') => {
         const id = Date.now();
         setToasts(prevToasts => [...prevToasts, { id, message, type }]);
     }, []);
-
-    // --- GOOGLE DRIVE LOGIC ---
-
-    const gapiInit = useCallback(() => {
-        if (process.env.DRIVE_API_KEY) {
-            window.gapi.client.init({
-                apiKey: process.env.DRIVE_API_KEY,
-                discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
-            }).then(() => setGapiReady(true))
-              .catch(e => {
-                  console.error("Error initializing gapi client", e);
-                  addToast("فشل تهيئة Google Drive API", "error");
-              });
-        } else {
-            addToast("مفتاح Google Drive API غير متوفر", "error");
-        }
-    }, [addToast]);
-    
-    const gisInit = useCallback(() => {
-        if (process.env.DRIVE_CLIENT_ID) {
-            setTokenClient(window.google.accounts.oauth2.initTokenClient({
-                client_id: process.env.DRIVE_CLIENT_ID,
-                scope: SCOPES,
-                callback: (tokenResponse: any) => {
-                    if (tokenResponse.error) {
-                        console.error('Google Auth Error:', tokenResponse.error);
-                        addToast(`خطأ في المصادقة: ${tokenResponse.error}`, 'error');
-                        return;
-                    }
-                    setIsDriveAuthed(true);
-                    addToast('تم الربط مع Google Drive بنجاح.');
-                },
-            }));
-            setGisReady(true);
-        } else {
-            addToast("معرف Google Client ID غير متوفر", "error");
-        }
-    }, [addToast]);
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (window.gapi) window.gapi.load('client', gapiInit);
-            if (window.google) window.google.accounts.oauth2.initTokenClient && gisInit();
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [gapiInit, gisInit]);
-
-    const handleAuthClick = () => tokenClient.requestAccessToken({ prompt: 'consent' });
-
-    const handleSignoutClick = () => {
-        setIsDriveAuthed(false);
-        window.gapi.client.setToken(null);
-        addToast('تم قطع الاتصال بـ Google Drive.');
-    };
-
-    const getFileId = useCallback(async (): Promise<string | null> => {
-        if (driveFileId) return driveFileId;
-
-        try {
-            const response = await window.gapi.client.drive.files.list({
-                spaces: 'appDataFolder',
-                fields: 'files(id, name)',
-                pageSize: 10,
-            });
-            const file = response.result.files.find((f: any) => f.name === DRIVE_FILE_NAME);
-            if (file) {
-                setDriveFileId(file.id);
-                return file.id;
-            }
-            return null;
-        } catch (e) {
-            console.error("Error listing files", e);
-            addToast("فشل في الوصول لملفات التطبيق.", "error");
-            return null;
-        }
-    }, [driveFileId, addToast]);
-
-    const handleSaveToDrive = useCallback(async () => {
-        if (!themeConfig) return;
-        addToast('جاري حفظ المسودة في Drive...', 'info');
-        let fileId = await getFileId();
-        const appData = { links, themeConfig, adminPassword };
-        const boundary = '-------314159265358979323846';
-        const delimiter = "\r\n--" + boundary + "\r\n";
-        const close_delim = "\r\n--" + boundary + "--";
-
-        const metadata = { name: DRIVE_FILE_NAME, mimeType: 'application/json' };
-        if (!fileId) metadata['parents'] = ['appDataFolder'];
-        
-        const multipartRequestBody =
-            delimiter + 'Content-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(metadata) +
-            delimiter + 'Content-Type: application/json\r\n\r\n' + JSON.stringify(appData) + close_delim;
-
-        const path = `/upload/drive/v3/files${fileId ? `/${fileId}` : ''}`;
-        const method = fileId ? 'PATCH' : 'POST';
-
-        try {
-            const response = await window.gapi.client.request({
-                path: path,
-                method: method,
-                params: { uploadType: 'multipart' },
-                headers: { 'Content-Type': 'multipart/related; boundary="' + boundary + '"' },
-                body: multipartRequestBody,
-            });
-
-            if (!fileId) setDriveFileId(response.result.id);
-            addToast('تم حفظ المسودة في Google Drive بنجاح.');
-        } catch (e) {
-            console.error("Error saving to drive", e);
-            addToast('فشل حفظ المسودة في Drive.', 'error');
-        }
-    }, [links, themeConfig, adminPassword, getFileId, addToast]);
-    
-    const handleLoadFromDrive = useCallback(async () => {
-        addToast('جاري تحميل المسودة من Drive...', 'info');
-        const fileId = await getFileId();
-        if (!fileId) {
-            addToast('لم يتم العثور على مسودة محفوظة.', 'error');
-            return;
-        }
-        try {
-            const response = await window.gapi.client.drive.files.get({
-                fileId: fileId,
-                alt: 'media',
-            });
-            const data = response.result;
-            if (data && Array.isArray(data.links) && data.themeConfig) {
-                setLinks(data.links);
-                setThemeConfig(data.themeConfig);
-                setAdminPassword(data.adminPassword || 'admin');
-                addToast('تم تحميل المسودة من Google Drive بنجاح.');
-            } else {
-                 addToast('صيغة الملف المحفوظ غير صالحة.', 'error');
-            }
-        } catch (e) {
-            console.error("Error loading from drive", e);
-            addToast('فشل تحميل المسودة من Drive.', 'error');
-        }
-    }, [getFileId, addToast]);
     
     // --- CORE APP LOGIC ---
 
@@ -562,43 +404,26 @@ const App: React.FC = () => {
                                 </button>
                             </div>
 
-                            <div className="w-full max-w-2xl grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="w-full p-4 rounded-lg bg-[var(--color-card-bg)] border border-[var(--color-border)] text-center">
-                                    <h3 className="font-bold text-lg mb-2 text-[var(--color-text-primary)]">مزامنة المسودات (خاص)</h3>
-                                    <p className="text-xs text-[var(--color-text-secondary)] mb-4">استخدم Google Drive لحفظ واستعادة مسوداتك. <strong className="text-amber-400">هذه الميزة لا تنشر التغييرات للطلاب.</strong></p>
-                                    {isDriveAuthed ? (
-                                        <div className="flex flex-col gap-3">
-                                            <button onClick={handleSaveToDrive} className="w-full inline-flex items-center justify-center gap-3 px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors">حفظ في Drive</button>
-                                            <button onClick={handleLoadFromDrive} className="w-full inline-flex items-center justify-center gap-3 px-4 py-2 bg-[var(--color-bg)] text-[var(--color-text-primary)] font-semibold rounded-md hover:brightness-125 transition-colors">تحميل من Drive</button>
-                                            <button onClick={handleSignoutClick} className="text-xs text-[var(--color-text-secondary)] hover:text-red-400 transition-colors">قطع الاتصال</button>
-                                        </div>
-                                    ) : (
-                                        <button onClick={handleAuthClick} disabled={!gapiReady || !gisReady} className="w-full inline-flex items-center justify-center gap-3 px-4 py-2 bg-gray-200 text-gray-800 font-semibold rounded-md hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                                            <GoogleDriveIcon className="w-5 h-5" />
-                                            <span>الربط مع Google Drive</span>
-                                        </button>
-                                    )}
+                            <div className="w-full max-w-xl p-4 rounded-lg bg-[var(--color-card-bg)] border border-[var(--color-border)] text-center">
+                                <h3 className="font-bold text-lg mb-2 text-[var(--color-text-primary)]">تحديث المحتوى للطلاب (نشر)</h3>
+                                <div className="flex gap-4 mb-4">
+                                    <button onClick={handleImport} className="w-full inline-flex items-center justify-center gap-3 px-4 py-2 bg-sky-600 text-white font-semibold rounded-md hover:bg-sky-700 transition-colors">
+                                        <ImportIcon className="w-5 h-5" />
+                                        <span>استيراد (استعادة)</span>
+                                    </button>
+                                     <button onClick={handleExport} className="w-full inline-flex items-center justify-center gap-3 px-4 py-2 bg-emerald-600 text-white font-semibold rounded-md hover:bg-emerald-700 transition-colors">
+                                        <ExportIcon className="w-5 h-5" />
+                                        <span>تصدير (للتحديث)</span>
+                                    </button>
                                 </div>
-
-                                <div className="w-full p-4 rounded-lg bg-[var(--color-card-bg)] border border-[var(--color-border)] text-center">
-                                    <h3 className="font-bold text-lg mb-2 text-[var(--color-text-primary)]">نشر البيانات (عام)</h3>
-                                    <div className="flex gap-4 mb-4">
-                                        <button onClick={handleImport} className="w-full inline-flex items-center justify-center gap-3 px-4 py-2 bg-sky-600 text-white font-semibold rounded-md hover:bg-sky-700 transition-colors">
-                                            <ImportIcon className="w-5 h-5" />
-                                            <span>استيراد</span>
-                                        </button>
-                                         <button onClick={handleExport} className="w-full inline-flex items-center justify-center gap-3 px-4 py-2 bg-emerald-600 text-white font-semibold rounded-md hover:bg-emerald-700 transition-colors">
-                                            <ExportIcon className="w-5 h-5" />
-                                            <span>تصدير (للتحديث)</span>
-                                        </button>
-                                    </div>
-                                    <div className="text-xs text-right text-[var(--color-text-secondary)] bg-[var(--color-bg)] p-3 rounded-md">
-                                        <h4 className="font-bold text-sm text-[var(--color-text-primary)] mb-1">خطوات النشر للطلاب:</h4>
-                                        <ol className="list-decimal list-inside space-y-1 pr-4">
-                                            <li>اضغط <strong>"تصدير"</strong> لتنزيل ملف <code className="text-xs bg-[var(--color-border)] px-1 rounded">.json</code>.</li>
-                                            <li className="font-bold text-amber-400">اذهب إلى Gist الخاص بك، حرره، والصق المحتوى الجديد.</li>
-                                        </ol>
-                                    </div>
+                                <div className="text-xs text-right text-[var(--color-text-secondary)] bg-[var(--color-bg)] p-3 rounded-md">
+                                    <h4 className="font-bold text-sm text-[var(--color-text-primary)] mb-1">خطوات النشر للطلاب:</h4>
+                                    <ol className="list-decimal list-inside space-y-1 pr-4">
+                                        <li>اضغط <strong>"تصدير"</strong> لتنزيل ملف <code className="text-xs bg-[var(--color-border)] px-1 rounded">.json</code>.</li>
+                                        <li>اذهب إلى Gist الخاص بك على GitHub.</li>
+                                        <li>اضغط <strong>"Edit"</strong>، احذف المحتوى القديم، ثم الصق المحتوى الجديد.</li>
+                                        <li className="font-bold text-amber-400">اضغط <strong>"Update public gist"</strong> لحفظ التغييرات.</li>
+                                    </ol>
                                 </div>
                             </div>
                         </div>
