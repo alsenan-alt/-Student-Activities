@@ -21,8 +21,20 @@ const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, userR
     const formattedDate = eventDate.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
     const formattedTime = eventDate.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    const isFemale = announcement.category === 'female';
-    const cardAccentColor = isFemale ? '#f472b6' : 'var(--color-accent)';
+    const getAccentColorByCategory = (category: 'male' | 'female' | 'all') => {
+        switch (category) {
+            case 'male':
+                return '#3b82f6'; // Blue for male
+            case 'female':
+                return '#f472b6'; // Pink for female
+            case 'all':
+                return '#a855f7'; // Purple for all
+            default:
+                return 'var(--color-accent)'; // Default accent color as fallback
+        }
+    };
+
+    const cardAccentColor = getAccentColorByCategory(announcement.category);
 
     return (
     <div className="group relative rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] shadow-lg transition-all duration-300 ease-in-out overflow-hidden animate-fade-in-up">
@@ -93,7 +105,7 @@ const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, userR
         ) : (
             <div className="flex items-center justify-center gap-2 text-center px-6 py-3 bg-transparent border-2 border-dashed border-[var(--color-border)] text-[var(--color-text-secondary)] font-semibold rounded-md">
                 <UsersIcon className="w-5 h-5" />
-                <span>التسجيل بالحضور المباشر</span>
+                <span>بدون تسجيل (متاح)</span>
             </div>
         )}
       </div>
