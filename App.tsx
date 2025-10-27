@@ -133,6 +133,17 @@ const DEFAULT_DATA = {
             date: new Date(new Date().setHours(23, 59, 59, 999)).toISOString(),
             location: 'الملاعب الرياضية',
             registrationType: 'open' as const,
+        },
+        {
+            id: 4,
+            title: 'مسابقة الهاكاثون السنوية',
+            category: 'all' as const,
+            imageUrl: 'https://placehold.co/600x400/f59e0b/white?text=Hackathon',
+            details: 'شارك في أكبر مسابقة برمجة وتحدي لحل مشاكل واقعية. مفتوحة للطلاب والطالبات.',
+            date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+            location: 'القاعة الكبرى',
+            registrationType: 'link' as const,
+            registrationUrl: 'https://forms.example.com/hackathon'
         }
     ],
     themeConfig: {
@@ -495,7 +506,7 @@ const App: React.FC = () => {
     );
 
     const filteredAnnouncements = announcements
-        .filter(ann => ann.category === announcementCategory)
+        .filter(ann => ann.category === announcementCategory || ann.category === 'all')
         .filter(ann => {
             const eventDate = new Date(ann.date);
             const expirationTime = new Date(eventDate.getTime() + ANNOUNCEMENT_EXPIRATION_HOURS * 60 * 60 * 1000);

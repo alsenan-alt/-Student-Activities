@@ -9,7 +9,7 @@ interface AnnouncementFormProps {
 
 const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, existingAnnouncement }) => {
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<'male' | 'female'>('male');
+  const [category, setCategory] = useState<'male' | 'female' | 'all'>('male');
   const [imageUrl, setImageUrl] = useState('');
   const [details, setDetails] = useState('');
   const [eventDate, setEventDate] = useState('');
@@ -92,10 +92,11 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
             </div>
              <div>
                 <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">الفئة</label>
-                <select value={category} onChange={(e) => setCategory(e.target.value as 'male' | 'female')}
+                <select value={category} onChange={(e) => setCategory(e.target.value as 'male' | 'female' | 'all')}
                     className="w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)]">
                     <option value="male">طلاب</option>
                     <option value="female">طالبات</option>
+                    <option value="all">طلاب وطالبات</option>
                 </select>
             </div>
         </div>

@@ -11,7 +11,7 @@ export interface LinkItem {
 export interface Announcement {
   id: number;
   title: string;
-  category: 'male' | 'female';
+  category: 'male' | 'female' | 'all';
   imageUrl: string;
   details: string;
   date: string; // ISO String format
