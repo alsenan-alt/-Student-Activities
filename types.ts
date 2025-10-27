@@ -8,6 +8,17 @@ export interface LinkItem {
   description?: string;
 }
 
+export interface Announcement {
+  id: number;
+  title: string;
+  category: 'male' | 'female';
+  imageUrl: string;
+  details: string;
+  date: string; // ISO String format
+  location: string;
+  registrationUrl: string;
+}
+
 export type ToastType = 'success' | 'error' | 'info';
 
 export interface ToastMessage {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import type { LinkItem, UserRole, ToastMessage, ThemeConfig } from './types';
+import type { LinkItem, UserRole, ToastMessage, ThemeConfig, Announcement } from './types';
 import Header from './components/Header';
 import LinkList from './components/LinkList';
 import AddLinkForm from './components/AddLinkForm';
@@ -16,6 +16,12 @@ import ThemeModal from './components/ThemeModal';
 import { ExportIcon } from './components/icons/ExportIcon';
 import { ImportIcon } from './components/icons/ImportIcon';
 import DataSourceStatus from './components/DataSourceStatus';
+import ViewSwitcher from './components/ViewSwitcher';
+import AnnouncementList from './components/AnnouncementList';
+import AnnouncementForm from './components/AnnouncementForm';
+import ImageModal from './components/ImageModal';
+import Pagination from './components/Pagination';
+import AnnouncementFilters from './components/AnnouncementFilters';
 
 const DATA_SOURCE_URL = 'https://gist.githubusercontent.com/alsenan-alt/90667b2526764f93d35e6328b72d0c4b/raw/472a8518b372d43a0bca4cc8fea0e55b71c74ed9/student-activity-data.json'; 
 
@@ -94,6 +100,38 @@ const DEFAULT_DATA = {
         { id: 2, title: 'جدول الفعاليات', url: 'https://calendar.example.com/events', icon: 'calendar', description: 'اطلع على جدول ومواعيد جميع الفعاليات والأنشطة القادمة.' },
         { id: 3, title: 'تواصل مع المشرف', url: 'https://contact.example.com/supervisor', icon: 'chat', description: 'قناة مباشرة للتواصل مع مشرف النشاط للإجابة على استفساراتكم.' },
     ],
+    announcements: [
+        {
+            id: 1,
+            title: 'ورشة عمل البرمجة التنافسية',
+            category: 'male' as const,
+            imageUrl: 'https://placehold.co/600x400/14b8a6/white?text=Programming',
+            details: 'انضم إلينا لتعلم أساسيات البرمجة التنافسية وحل المشكلات المعقدة. الورشة مناسبة للمبتدئين والمتقدمين.',
+            date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+            location: 'معمل الحاسب الآلي - مبنى 5',
+            registrationUrl: 'https://forms.example.com/programming-workshop'
+        },
+        {
+            id: 2,
+            title: 'معرض الفنون والإبداع السنوي',
+            category: 'female' as const,
+            imageUrl: 'https://placehold.co/600x400/f472b6/white?text=Art+Fair',
+            details: 'ندعو جميع الطالبات المبدعات للمشاركة وعرض أعمالهن الفنية في المعرض السنوي. جوائز قيمة بانتظاركم.',
+            date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+            location: 'قاعة المعارض - مبنى الأنشطة',
+            registrationUrl: 'https://forms.example.com/art-fair'
+        },
+        {
+            id: 3,
+            title: 'اليوم الرياضي المفتوح',
+            category: 'male' as const,
+            imageUrl: 'https://placehold.co/600x400/3b82f6/white?text=Sports+Day',
+            details: 'يوم مليء بالأنشطة الرياضية والمسابقات. شارك في كرة القدم، السلة، والمزيد!',
+            date: new Date(new Date().setHours(23, 59, 59, 999)).toISOString(),
+            location: 'الملاعب الرياضية',
+            registrationUrl: 'https://forms.example.com/sports-day'
+        }
+    ],
     themeConfig: {
         title: "إدارة النشاط الطلابي",
         subtitle: "مكانك المركزي لإدارة جميع روابط النشاط الطلابي",
@@ -106,21 +144,34 @@ const DEFAULT_DATA = {
     adminPassword: 'admin'
 };
 
+const ITEMS_PER_PAGE = 6;
+const ANNOUNCEMENT_EXPIRATION_HOURS = 4;
+
 const App: React.FC = () => {
     // --- STATE & REFS ---
     const [links, setLinks] = useState<LinkItem[]>([]);
+    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [themeConfig, setThemeConfig] = useState<ThemeConfig | null>(null);
     const [adminPassword, setAdminPassword] = useState<string>('admin');
     const [isLinkFormOpen, setIsLinkFormOpen] = useState(false);
+    const [isAnnouncementFormOpen, setIsAnnouncementFormOpen] = useState(false);
     const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
     const [editingLink, setEditingLink] = useState<LinkItem | null>(null);
+    const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
     const [userRole, setUserRole] = useState<UserRole>('student');
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
     const [isChangePasswordModalOpen, setChangePasswordModalOpen] = useState(false);
     const [toasts, setToasts] = useState<ToastMessage[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [announcementSearchQuery, setAnnouncementSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [fetchError, setFetchError] = useState<string | null>(null);
+    const [activeView, setActiveView] = useState<'links' | 'announcements'>('announcements');
+    const [announcementCategory, setAnnouncementCategory] = useState<'male' | 'female'>('male');
+    const [viewingImage, setViewingImage] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [showTodaysAnnouncements, setShowTodaysAnnouncements] = useState(false);
+
 
     // --- CALLBACKS & HELPER FUNCTIONS ---
     const addToast = useCallback((message: string, type: ToastMessage['type'] = 'success') => {
@@ -147,6 +198,7 @@ const App: React.FC = () => {
                         const serverData = await response.json();
                         if (serverData && serverData.links && serverData.themeConfig) {
                             setLinks(serverData.links);
+                            setAnnouncements(serverData.announcements || []);
                             setThemeConfig(serverData.themeConfig);
                             setAdminPassword(serverData.adminPassword || 'admin');
                             localStorage.setItem('studentActivityData', JSON.stringify(serverData));
@@ -177,6 +229,7 @@ const App: React.FC = () => {
                     const localData = JSON.parse(localDataString);
                     if (localData && localData.links && localData.themeConfig) {
                         setLinks(localData.links);
+                        setAnnouncements(localData.announcements || []);
                         setThemeConfig(localData.themeConfig);
                         setAdminPassword(localData.adminPassword || 'admin');
                          console.log("Data loaded successfully from localStorage.");
@@ -190,6 +243,7 @@ const App: React.FC = () => {
             // Priority 3: Fallback to hardcoded defaults
             console.log("Falling back to default data.");
             setLinks(DEFAULT_DATA.links);
+            setAnnouncements(DEFAULT_DATA.announcements);
             setThemeConfig(DEFAULT_DATA.themeConfig);
             setAdminPassword(DEFAULT_DATA.adminPassword);
         };
@@ -201,13 +255,13 @@ const App: React.FC = () => {
     useEffect(() => {
         if (!isLoading && themeConfig && userRole === 'admin') {
             try {
-                const appData = { links, themeConfig, adminPassword };
+                const appData = { links, announcements, themeConfig, adminPassword };
                 localStorage.setItem('studentActivityData', JSON.stringify(appData));
             } catch (error) {
                 console.error("Failed to save to localStorage", error);
             }
         }
-    }, [links, themeConfig, adminPassword, isLoading, userRole]);
+    }, [links, announcements, themeConfig, adminPassword, isLoading, userRole]);
     
     // Effect for applying theme
     useEffect(() => {
@@ -225,13 +279,18 @@ const App: React.FC = () => {
             }
         }
     }, [themeConfig]);
+
+    // Effect to reset pagination when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [announcementCategory, activeView, showTodaysAnnouncements, announcementSearchQuery]);
     
     
     // --- EVENT HANDLERS ---
     const handleExport = () => {
         if (!themeConfig) return;
         try {
-            const appData = { links, themeConfig, adminPassword };
+            const appData = { links, announcements, themeConfig, adminPassword };
             const jsonString = JSON.stringify(appData, null, 2);
             const blob = new Blob([jsonString], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -264,6 +323,7 @@ const App: React.FC = () => {
                             const data = JSON.parse(result);
                             if (data && Array.isArray(data.links) && data.themeConfig && typeof data.adminPassword === 'string') {
                                 setLinks(data.links);
+                                setAnnouncements(data.announcements || []);
                                 setThemeConfig(data.themeConfig);
                                 setAdminPassword(data.adminPassword);
                                 addToast('تم استيراد الإعدادات بنجاح.');
@@ -301,10 +361,29 @@ const App: React.FC = () => {
         }
         closeLinkForm();
     };
+    
+    const handleSaveAnnouncement = (announcementData: Omit<Announcement, 'id'>, id: number | null) => {
+        if (id !== null) {
+            setAnnouncements(prev => 
+                prev.map(ann => ann.id === id ? { ...ann, ...announcementData } : ann)
+            );
+            addToast('تم تحديث الإعلان بنجاح!');
+        } else {
+            const newAnnouncement: Announcement = { id: Date.now(), ...announcementData };
+            setAnnouncements(prev => [newAnnouncement, ...prev]);
+            addToast('تمت إضافة الإعلان بنجاح!');
+        }
+        closeAnnouncementForm();
+    };
 
     const handleDeleteLink = (id: number) => {
         setLinks(prevLinks => prevLinks.filter(link => link.id !== id));
         addToast('تم حذف الرابط بنجاح!');
+    };
+
+    const handleDeleteAnnouncement = (id: number) => {
+        setAnnouncements(prev => prev.filter(ann => ann.id !== id));
+        addToast('تم حذف الإعلان.');
     };
 
     const handleReorderLinks = (reorderedLinks: LinkItem[]) => {
@@ -325,6 +404,22 @@ const App: React.FC = () => {
         setIsLinkFormOpen(false);
         setEditingLink(null);
     };
+
+    const openAddAnnouncementForm = () => {
+        setEditingAnnouncement(null);
+        setIsAnnouncementFormOpen(true);
+    };
+
+    const openEditAnnouncementForm = (announcement: Announcement) => {
+        setEditingAnnouncement(announcement);
+        setIsAnnouncementFormOpen(true);
+    };
+    
+    const closeAnnouncementForm = () => {
+        setIsAnnouncementFormOpen(false);
+        setEditingAnnouncement(null);
+    };
+
 
     const handleRoleChangeRequest = (role: UserRole) => {
         if (role === 'student') {
@@ -374,6 +469,41 @@ const App: React.FC = () => {
         link.description?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    const filteredAnnouncements = announcements
+        .filter(ann => ann.category === announcementCategory)
+        .filter(ann => {
+            const eventDate = new Date(ann.date);
+            const expirationTime = new Date(eventDate.getTime() + ANNOUNCEMENT_EXPIRATION_HOURS * 60 * 60 * 1000);
+            return new Date() <= expirationTime;
+        })
+        .filter(ann => {
+            if (!showTodaysAnnouncements) {
+                return true;
+            }
+            const eventDate = new Date(ann.date);
+            const today = new Date();
+            return (
+                eventDate.getFullYear() === today.getFullYear() &&
+                eventDate.getMonth() === today.getMonth() &&
+                eventDate.getDate() === today.getDate()
+            );
+        })
+        .filter(ann => {
+            if (!announcementSearchQuery) return true;
+            const query = announcementSearchQuery.toLowerCase();
+            return (
+                ann.title.toLowerCase().includes(query) ||
+                ann.details.toLowerCase().includes(query)
+            );
+        });
+
+    const totalPages = Math.ceil(filteredAnnouncements.length / ITEMS_PER_PAGE);
+    const paginatedAnnouncements = filteredAnnouncements.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
+
+
     return (
         <div className="min-h-screen p-4 sm:p-6 md:p-8">
             <ToastContainer toasts={toasts} onDismiss={removeToast} />
@@ -387,21 +517,89 @@ const App: React.FC = () => {
                 />
                 <RoleSwitcher currentRole={userRole} onRoleChange={handleRoleChangeRequest} />
                 <main>
-                    <div className="mb-8">
-                        <SearchBar value={searchQuery} onChange={setSearchQuery} />
+                    <div className="flex justify-center mb-6">
+                        <ViewSwitcher activeView={activeView} onSwitch={setActiveView} />
                     </div>
 
+                    {activeView === 'links' && (
+                        <>
+                            <div className="mb-8">
+                                <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="ابحث عن رابط..." />
+                            </div>
+
+                            {userRole === 'admin' && (
+                                <div className="mb-8 flex flex-col items-center gap-6">
+                                    <button
+                                        onClick={openAddForm}
+                                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-accent)] text-white font-semibold rounded-md hover:brightness-90 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-accent)] shadow-lg hover:shadow-[var(--color-accent)]/30 transform hover:-translate-y-0.5"
+                                    >
+                                        <PlusIcon className="w-5 h-5" />
+                                        <span>إضافة رابط جديد</span>
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="border-t border-[var(--color-border)] pt-8">
+                                <LinkList 
+                                    links={filteredLinks} 
+                                    onDelete={handleDeleteLink} 
+                                    onEdit={openEditForm}
+                                    onReorder={handleReorderLinks}
+                                    userRole={userRole}
+                                    searchQuery={searchQuery} 
+                                />
+                            </div>
+                        </>
+                    )}
+                    
+                    {activeView === 'announcements' && (
+                        <div>
+                            <AnnouncementFilters
+                                category={announcementCategory}
+                                onCategoryChange={setAnnouncementCategory}
+                                searchQuery={announcementSearchQuery}
+                                onSearchChange={setAnnouncementSearchQuery}
+                                showTodays={showTodaysAnnouncements}
+                                onShowTodaysChange={setShowTodaysAnnouncements}
+                            />
+                            
+                            {userRole === 'admin' && (
+                                <div className="mb-8 flex justify-center">
+                                     <button
+                                        onClick={openAddAnnouncementForm}
+                                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-accent)] text-white font-semibold rounded-md hover:brightness-90 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-accent)] shadow-lg hover:shadow-[var(--color-accent)]/30 transform hover:-translate-y-0.5"
+                                    >
+                                        <PlusIcon className="w-5 h-5" />
+                                        <span>إضافة إعلان جديد</span>
+                                    </button>
+                                </div>
+                            )}
+
+                             <AnnouncementList 
+                                announcements={paginatedAnnouncements}
+                                userRole={userRole}
+                                onDelete={handleDeleteAnnouncement}
+                                onEdit={openEditAnnouncementForm}
+                                onImageClick={setViewingImage}
+                                searchQuery={announcementSearchQuery}
+                             />
+                             {totalPages > 1 && (
+                                <div className="mt-8">
+                                    <Pagination 
+                                        currentPage={currentPage}
+                                        totalPages={totalPages}
+                                        onPageChange={setCurrentPage}
+                                    />
+                                </div>
+                             )}
+                        </div>
+                    )}
+
+
                     {userRole === 'admin' && (
-                        <div className="mb-8 flex flex-col items-center gap-6">
-                            <DataSourceStatus url={DATA_SOURCE_URL} isLoading={isLoading} error={fetchError} />
+                        <div className="mt-16 pt-8 border-t border-[var(--color-border)] flex flex-col items-center gap-6">
+                             <DataSourceStatus url={DATA_SOURCE_URL} isLoading={isLoading} error={fetchError} />
                             <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-4">
-                                <button
-                                    onClick={openAddForm}
-                                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-accent)] text-white font-semibold rounded-md hover:brightness-90 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-accent)] shadow-lg hover:shadow-[var(--color-accent)]/30 transform hover:-translate-y-0.5"
-                                >
-                                    <PlusIcon className="w-5 h-5" />
-                                    <span>إضافة رابط جديد</span>
-                                </button>
                                 <button
                                     onClick={() => setChangePasswordModalOpen(true)}
                                     className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-card-bg)] text-[var(--color-text-primary)] font-semibold rounded-md hover:brightness-125 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-text-secondary)] shadow-lg transform hover:-translate-y-0.5"
@@ -442,17 +640,6 @@ const App: React.FC = () => {
                             </div>
                         </div>
                     )}
-
-                    <div className="border-t border-[var(--color-border)] pt-8">
-                      <LinkList 
-                        links={filteredLinks} 
-                        onDelete={handleDeleteLink} 
-                        onEdit={openEditForm}
-                        onReorder={handleReorderLinks}
-                        userRole={userRole}
-                        searchQuery={searchQuery} 
-                      />
-                    </div>
                 </main>
                 <footer className="text-center text-[var(--color-text-secondary)] mt-12 py-4">
                     <p>&copy; {new Date().getFullYear()} {themeConfig.title}. كل الحقوق محفوظة.</p>
@@ -465,6 +652,16 @@ const App: React.FC = () => {
                         onSave={handleSaveLink} 
                         onClose={closeLinkForm}
                         existingLink={editingLink}
+                    />
+                </Modal>
+            )}
+
+             {isAnnouncementFormOpen && (
+                <Modal onClose={closeAnnouncementForm}>
+                    <AnnouncementForm
+                        onSave={handleSaveAnnouncement}
+                        onClose={closeAnnouncementForm}
+                        existingAnnouncement={editingAnnouncement}
                     />
                 </Modal>
             )}
@@ -488,6 +685,14 @@ const App: React.FC = () => {
                     onClose={() => setIsThemeModalOpen(false)}
                     onSave={handleSaveTheme}
                     currentTheme={themeConfig}
+                />
+            )}
+
+            {viewingImage && (
+                <ImageModal
+                    imageUrl={viewingImage}
+                    altText="صورة الإعلان"
+                    onClose={() => setViewingImage(null)}
                 />
             )}
         </div>
