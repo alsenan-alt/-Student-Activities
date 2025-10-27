@@ -1,6 +1,8 @@
 import React from 'react';
 import SearchBar from './SearchBar';
 import ToggleSwitch from './ToggleSwitch';
+import { UserMaleIcon } from './icons/UserMaleIcon';
+import { UserFemaleIcon } from './icons/UserFemaleIcon';
 
 interface AnnouncementFiltersProps {
   category: 'male' | 'female';
@@ -28,8 +30,14 @@ const AnnouncementFilters: React.FC<AnnouncementFiltersProps> = ({
           }`}
           aria-hidden="true"
         />
-        <button onClick={() => onCategoryChange('male')} className="relative z-10 w-1/2 py-2 text-sm font-semibold text-center text-white rounded-full focus:outline-none">طلاب</button>
-        <button onClick={() => onCategoryChange('female')} className="relative z-10 w-1/2 py-2 text-sm font-semibold text-center text-white rounded-full focus:outline-none">طالبات</button>
+        <button onClick={() => onCategoryChange('male')} className="relative z-10 w-1/2 py-2 text-sm font-semibold text-center text-white rounded-full focus:outline-none flex items-center justify-center gap-2">
+            <UserMaleIcon className="w-5 h-5" />
+            <span>طلاب</span>
+        </button>
+        <button onClick={() => onCategoryChange('female')} className="relative z-10 w-1/2 py-2 text-sm font-semibold text-center text-white rounded-full focus:outline-none flex items-center justify-center gap-2">
+            <UserFemaleIcon className="w-5 h-5" />
+            <span>طالبات</span>
+        </button>
       </div>
 
       <SearchBar value={searchQuery} onChange={onSearchChange} placeholder="ابحث عن إعلان..." />

@@ -15,6 +15,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [location, setLocation] = useState('');
+  const [registrationType, setRegistrationType] = useState<'link' | 'open'>('link');
   const [registrationUrl, setRegistrationUrl] = useState('');
   const [error, setError] = useState('');
 
@@ -38,13 +39,14 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
       setEventTime(`${hours}:${minutes}`);
       
       setLocation(existingAnnouncement.location);
-      setRegistrationUrl(existingAnnouncement.registrationUrl);
+      setRegistrationType(existingAnnouncement.registrationType || 'link');
+      setRegistrationUrl(existingAnnouncement.registrationUrl || '');
     }
   }, [existingAnnouncement, isEditing]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !imageUrl.trim() || !eventDate || !eventTime || !location.trim() || !registrationUrl.trim()) {
+    if (!title.trim() || !imageUrl.trim() || !eventDate || !eventTime || !location.trim()) {
       setError('الرجاء ملء جميع الحقول المطلوبة.');
       return;
     }
@@ -52,8 +54,15 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
     try { new URL(imageUrl); } catch (_) {
       setError('الرجاء إدخال رابط صورة صالح.'); return;
     }
-    try { new URL(registrationUrl); } catch (_) {
-      setError('الرجاء إدخال رابط تسجيل صالح.'); return;
+    
+    if (registrationType === 'link') {
+        if (!registrationUrl.trim()) {
+            setError('رابط التسجيل مطلوب عند اختيار هذا النوع.');
+            return;
+        }
+        try { new URL(registrationUrl); } catch (_) {
+            setError('الرجاء إدخال رابط تسجيل صالح.'); return;
+        }
     }
 
     setError('');
@@ -64,7 +73,8 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
         details,
         date: new Date(`${eventDate}T${eventTime}`).toISOString(),
         location,
-        registrationUrl
+        registrationType,
+        registrationUrl: registrationType === 'link' ? registrationUrl : undefined,
     }, isEditing ? existingAnnouncement.id : null);
   };
 
@@ -117,10 +127,20 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
             className="w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)]" />
         </div>
         <div>
-          <label htmlFor="ann-reg-url" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">رابط التسجيل</label>
-          <input id="ann-reg-url" type="url" placeholder="https://forms.example.com/register" value={registrationUrl} onChange={(e) => setRegistrationUrl(e.target.value)}
-            className="w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)]" />
+            <label htmlFor="ann-reg-type" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">نوع التسجيل</label>
+            <select id="ann-reg-type" value={registrationType} onChange={(e) => setRegistrationType(e.target.value as 'link' | 'open')}
+                className="w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)]">
+                <option value="link">يتطلب رابط تسجيل</option>
+                <option value="open">متاح بدون تسجيل</option>
+            </select>
         </div>
+        {registrationType === 'link' && (
+            <div className="animate-fade-in-up">
+                <label htmlFor="ann-reg-url" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">رابط التسجيل</label>
+                <input id="ann-reg-url" type="url" placeholder="https://forms.example.com/register" value={registrationUrl} onChange={(e) => setRegistrationUrl(e.target.value)}
+                    className="w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)]" />
+            </div>
+        )}
         
         {error && <p className="text-red-400 text-sm text-center">{error}</p>}
         

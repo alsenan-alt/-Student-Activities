@@ -3,9 +3,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 interface CountdownProps {
   targetDate: string;
   onComplete: () => void;
+  cardAccentColor?: string;
 }
 
-const Countdown: React.FC<CountdownProps> = ({ targetDate, onComplete }) => {
+const Countdown: React.FC<CountdownProps> = ({ targetDate, onComplete, cardAccentColor }) => {
   const calculateTimeLeft = () => {
     const difference = +new Date(targetDate) - +new Date();
     let timeLeft = {
@@ -73,7 +74,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, onComplete }) => {
     <div className="flex justify-center items-center gap-2 text-center" dir="ltr">
         {timerComponents.map(component => (
             <div key={component.label} className="flex flex-col items-center justify-center bg-[var(--color-bg)] p-2 rounded-md w-16">
-                 <span className="text-xl font-bold text-[var(--color-accent)] tracking-widest" style={{fontFamily: 'monospace'}}>
+                 <span className="text-xl font-bold tracking-widest" style={{fontFamily: 'monospace', color: cardAccentColor || 'var(--color-accent)'}}>
                     {String(component.value).padStart(2, '0')}
                  </span>
                  <span className="text-xs text-[var(--color-text-secondary)]">{component.label}</span>

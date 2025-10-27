@@ -6,6 +6,7 @@ import Countdown from './Countdown';
 import { ClockIcon } from './icons/ClockIcon';
 import { LocationMarkerIcon } from './icons/LocationMarkerIcon';
 import { CalendarIcon } from './icons/CalendarIcon';
+import { UsersIcon } from './icons/UsersIcon';
 
 interface AnnouncementCardProps {
   announcement: Announcement;
@@ -19,6 +20,9 @@ const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, userR
     const eventDate = new Date(announcement.date);
     const formattedDate = eventDate.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
     const formattedTime = eventDate.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    const isFemale = announcement.category === 'female';
+    const cardAccentColor = isFemale ? '#f472b6' : 'var(--color-accent)';
 
     return (
     <div className="group relative rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] shadow-lg transition-all duration-300 ease-in-out overflow-hidden animate-fade-in-up">
@@ -58,32 +62,40 @@ const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, userR
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mb-4">
             <div className="flex items-center gap-2 p-2 bg-[var(--color-bg)] rounded-md">
-                <CalendarIcon className="w-5 h-5 text-[var(--color-accent)]" />
+                <CalendarIcon className="w-5 h-5" style={{ color: cardAccentColor }} />
                 <span className="text-[var(--color-text-primary)]">{formattedDate}</span>
             </div>
              <div className="flex items-center gap-2 p-2 bg-[var(--color-bg)] rounded-md">
-                <ClockIcon className="w-5 h-5 text-[var(--color-accent)]" />
+                <ClockIcon className="w-5 h-5" style={{ color: cardAccentColor }} />
                 <span className="text-[var(--color-text-primary)]">{formattedTime}</span>
             </div>
              <div className="flex items-center gap-2 p-2 bg-[var(--color-bg)] rounded-md col-span-1 sm:col-span-2">
-                <LocationMarkerIcon className="w-5 h-5 text-[var(--color-accent)]" />
+                <LocationMarkerIcon className="w-5 h-5" style={{ color: cardAccentColor }} />
                 <span className="text-[var(--color-text-primary)]">{announcement.location}</span>
             </div>
         </div>
 
         <div className="mb-5">
             <h4 className="text-center text-sm font-semibold text-[var(--color-text-secondary)] mb-2">الوقت المتبقي</h4>
-            <Countdown targetDate={announcement.date} onComplete={() => {}} />
+            <Countdown targetDate={announcement.date} onComplete={() => {}} cardAccentColor={cardAccentColor} />
         </div>
 
-        <a
-          href={announcement.registrationUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block w-full text-center px-6 py-3 bg-[var(--color-accent)] text-white font-semibold rounded-md hover:brightness-90 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-card-bg)] focus:ring-[var(--color-accent)]"
-        >
-          رابط التسجيل
-        </a>
+        {announcement.registrationType === 'link' && announcement.registrationUrl ? (
+            <a
+            href={announcement.registrationUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ backgroundColor: cardAccentColor, '--tw-ring-color': cardAccentColor } as React.CSSProperties}
+            className="block w-full text-center px-6 py-3 text-white font-semibold rounded-md hover:brightness-90 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-card-bg)]"
+            >
+            رابط التسجيل
+            </a>
+        ) : (
+            <div className="flex items-center justify-center gap-2 text-center px-6 py-3 bg-transparent border-2 border-dashed border-[var(--color-border)] text-[var(--color-text-secondary)] font-semibold rounded-md">
+                <UsersIcon className="w-5 h-5" />
+                <span>التسجيل بالحضور المباشر</span>
+            </div>
+        )}
       </div>
     </div>
   );

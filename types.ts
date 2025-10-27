@@ -16,7 +16,8 @@ export interface Announcement {
   details: string;
   date: string; // ISO String format
   location: string;
-  registrationUrl: string;
+  registrationType: 'link' | 'open';
+  registrationUrl?: string;
 }
 
 export type ToastType = 'success' | 'error' | 'info';

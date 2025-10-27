@@ -110,6 +110,7 @@ const DEFAULT_DATA = {
             details: 'انضم إلينا لتعلم أساسيات البرمجة التنافسية وحل المشكلات المعقدة. الورشة مناسبة للمبتدئين والمتقدمين.',
             date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
             location: 'معمل الحاسب الآلي - مبنى 5',
+            registrationType: 'link' as const,
             registrationUrl: 'https://forms.example.com/programming-workshop'
         },
         {
@@ -120,6 +121,7 @@ const DEFAULT_DATA = {
             details: 'ندعو جميع الطالبات المبدعات للمشاركة وعرض أعمالهن الفنية في المعرض السنوي. جوائز قيمة بانتظاركم.',
             date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
             location: 'قاعة المعارض - مبنى الأنشطة',
+            registrationType: 'link' as const,
             registrationUrl: 'https://forms.example.com/art-fair'
         },
         {
@@ -130,7 +132,7 @@ const DEFAULT_DATA = {
             details: 'يوم مليء بالأنشطة الرياضية والمسابقات. شارك في كرة القدم، السلة، والمزيد!',
             date: new Date(new Date().setHours(23, 59, 59, 999)).toISOString(),
             location: 'الملاعب الرياضية',
-            registrationUrl: 'https://forms.example.com/sports-day'
+            registrationType: 'open' as const,
         }
     ],
     themeConfig: {
