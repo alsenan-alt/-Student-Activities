@@ -22,8 +22,9 @@ import AnnouncementForm from './components/AnnouncementForm';
 import ImageModal from './components/ImageModal';
 import Pagination from './components/Pagination';
 import AnnouncementFilters from './components/AnnouncementFilters';
+import { RefreshIcon } from './components/icons/RefreshIcon';
 
-const DATA_SOURCE_URL = 'https://gist.githubusercontent.com/alsenan-alt/90667b2526764f93d35e6328b72d0c4b/raw/472a8518b372d43a0bca4cc8fea0e55b71c74ed9/student-activity-data.json'; 
+const DATA_SOURCE_URL = 'https://gist.githubusercontent.com/alsenan-alt/90667b2526764f93d35e6328b72d0c4b/raw/student-activity-data.json'; 
 
 export const themePresets: { [key: string]: { name: string; settings: { [key: string]: string } } } = {
   default: {
@@ -165,6 +166,7 @@ const App: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [announcementSearchQuery, setAnnouncementSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [activeView, setActiveView] = useState<'links' | 'announcements'>('announcements');
     const [announcementCategory, setAnnouncementCategory] = useState<'male' | 'female'>('male');
@@ -181,46 +183,51 @@ const App: React.FC = () => {
     
     // --- CORE APP LOGIC ---
 
-    // Effect for loading initial data
-    useEffect(() => {
-        const loadInitialData = async () => {
-            let errorMessage: string | null = null;
-            try {
-                if (DATA_SOURCE_URL) {
-                    const response = await fetch(`${DATA_SOURCE_URL}?cachebust=${new Date().getTime()}`);
-                    if (!response.ok) {
-                        if (response.status === 404) {
-                            errorMessage = 'فشل الاتصال: لم يتم العثور على الملف على الرابط (خطأ 404). الرجاء التأكد من صحة الرابط.';
-                        } else {
-                            errorMessage = `فشل الاتصال بالخادم (خطأ ${response.status}).`;
-                        }
+    const loadInitialData = useCallback(async (isRefresh = false) => {
+        if (isRefresh) {
+            setIsRefreshing(true);
+        } else {
+            setIsLoading(true);
+        }
+
+        let errorMessage: string | null = null;
+        let success = false;
+
+        try {
+            if (DATA_SOURCE_URL) {
+                const response = await fetch(`${DATA_SOURCE_URL}?cachebust=${new Date().getTime()}`);
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        errorMessage = 'فشل الاتصال: لم يتم العثور على الملف على الرابط (خطأ 404). الرجاء التأكد من صحة الرابط.';
                     } else {
-                        const serverData = await response.json();
-                        if (serverData && serverData.links && serverData.themeConfig) {
-                            setLinks(serverData.links);
-                            setAnnouncements(serverData.announcements || []);
-                            setThemeConfig(serverData.themeConfig);
-                            setAdminPassword(serverData.adminPassword || 'admin');
-                            localStorage.setItem('studentActivityData', JSON.stringify(serverData));
-                            console.log("Data loaded successfully from Gist.");
-                            setFetchError(null);
-                            return;
-                        } else {
-                           errorMessage = 'البيانات المستلمة من الرابط غير صالحة.';
-                        }
+                        errorMessage = `فشل الاتصال بالخادم (خطأ ${response.status}).`;
                     }
                 } else {
-                    errorMessage = 'لم يتم تكوين رابط مصدر البيانات. يتم عرض البيانات المحلية.';
+                    const serverData = await response.json();
+                    if (serverData && serverData.links && serverData.themeConfig) {
+                        setLinks(serverData.links);
+                        setAnnouncements(serverData.announcements || []);
+                        setThemeConfig(serverData.themeConfig);
+                        setAdminPassword(serverData.adminPassword || 'admin');
+                        localStorage.setItem('studentActivityData', JSON.stringify(serverData));
+                        console.log("Data loaded successfully from Gist.");
+                        setFetchError(null);
+                        success = true;
+                    } else {
+                       errorMessage = 'البيانات المستلمة من الرابط غير صالحة.';
+                    }
                 }
-            } catch (error) {
-                console.error("Could not fetch/parse server data, falling back to local.", error);
-                errorMessage = 'حدث خطأ في الشبكة أو في تحليل البيانات. سيتم عرض آخر نسخة محفوظة.';
+            } else {
+                errorMessage = 'لم يتم تكوين رابط مصدر البيانات. يتم عرض البيانات المحلية.';
             }
+        } catch (error) {
+            console.error("Could not fetch/parse server data, falling back to local.", error);
+            errorMessage = 'حدث خطأ في الشبكة أو في تحليل البيانات. سيتم عرض آخر نسخة محفوظة.';
+        }
 
-            if (errorMessage) {
-                setFetchError(errorMessage);
-                addToast(errorMessage, "error");
-            }
+        if (errorMessage && !success) {
+            setFetchError(errorMessage);
+            if (!isRefresh) addToast(errorMessage, "error");
 
             // Priority 2: Fallback to localStorage
             try {
@@ -233,23 +240,39 @@ const App: React.FC = () => {
                         setThemeConfig(localData.themeConfig);
                         setAdminPassword(localData.adminPassword || 'admin');
                          console.log("Data loaded successfully from localStorage.");
-                        return;
+                         success = true; // يعتبر نجاحا لأنه حمل البيانات المخزنة
                     }
                 }
             } catch (error) {
                 console.error("Could not parse local data.", error);
             }
-
-            // Priority 3: Fallback to hardcoded defaults
+        }
+        
+        if(!success) {
+             // Priority 3: Fallback to hardcoded defaults
             console.log("Falling back to default data.");
             setLinks(DEFAULT_DATA.links);
             setAnnouncements(DEFAULT_DATA.announcements);
             setThemeConfig(DEFAULT_DATA.themeConfig);
             setAdminPassword(DEFAULT_DATA.adminPassword);
-        };
+        }
 
-        loadInitialData().finally(() => setIsLoading(false));
+        if (isRefresh) {
+            if (success) {
+                addToast('تم تحديث البيانات بنجاح.');
+            } else {
+                addToast('فشل تحديث البيانات. تحقق من اتصالك بالإنترنت.', 'error');
+            }
+            setIsRefreshing(false);
+        } else {
+            setIsLoading(false);
+        }
     }, [addToast]);
+
+    // Effect for loading initial data on mount
+    useEffect(() => {
+        loadInitialData(false);
+    }, [loadInitialData]);
 
     // Effect for saving data to localStorage on changes (admin's draft)
     useEffect(() => {
@@ -517,8 +540,17 @@ const App: React.FC = () => {
                 />
                 <RoleSwitcher currentRole={userRole} onRoleChange={handleRoleChangeRequest} />
                 <main>
-                    <div className="flex justify-center mb-6">
+                    <div className="flex justify-center items-center gap-4 mb-6">
                         <ViewSwitcher activeView={activeView} onSwitch={setActiveView} />
+                        <button
+                            onClick={() => loadInitialData(true)}
+                            disabled={isRefreshing}
+                            className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-[var(--color-text-secondary)] bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-full hover:text-[var(--color-text-primary)] hover:border-[var(--color-text-secondary)] transition-colors disabled:opacity-50 disabled:cursor-wait"
+                            aria-label="تحديث البيانات"
+                        >
+                            <RefreshIcon className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                            <span className="hidden sm:inline">{isRefreshing ? 'جاري التحديث...' : 'تحديث'}</span>
+                        </button>
                     </div>
 
                     {activeView === 'links' && (
@@ -598,7 +630,7 @@ const App: React.FC = () => {
 
                     {userRole === 'admin' && (
                         <div className="mt-16 pt-8 border-t border-[var(--color-border)] flex flex-col items-center gap-6">
-                             <DataSourceStatus url={DATA_SOURCE_URL} isLoading={isLoading} error={fetchError} />
+                             <DataSourceStatus url={DATA_SOURCE_URL} isLoading={isRefreshing || isLoading} error={fetchError} />
                             <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-4">
                                 <button
                                     onClick={() => setChangePasswordModalOpen(true)}
