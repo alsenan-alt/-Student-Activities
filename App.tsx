@@ -23,6 +23,10 @@ import ImageModal from './components/ImageModal';
 import Pagination from './components/Pagination';
 import AnnouncementFilters from './components/AnnouncementFilters';
 import { RefreshIcon } from './components/icons/RefreshIcon';
+import { ChartBarIcon } from './components/icons/ChartBarIcon';
+import StatisticsModal from './components/StatisticsModal';
+import { DocumentTextIcon } from './components/icons/DocumentTextIcon';
+import ReportModal from './components/ReportModal';
 
 const DATA_SOURCE_URL = 'https://gist.githubusercontent.com/alsenan-alt/90667b2526764f93d35e6328b72d0c4b/raw/student-activity-data.json'; 
 
@@ -97,9 +101,9 @@ export const themePresets: { [key: string]: { name: string; settings: { [key: st
 
 const DEFAULT_DATA = {
     links: [
-        { id: 1, title: 'نموذج تسجيل الأنشطة', url: 'https://forms.example.com/registration', icon: 'document', description: 'استخدم هذا النموذج لتسجيل اسمك في الأنشطة الطلابية المتاحة.' },
-        { id: 2, title: 'جدول الفعاليات', url: 'https://calendar.example.com/events', icon: 'calendar', description: 'اطلع على جدول ومواعيد جميع الفعاليات والأنشطة القادمة.' },
-        { id: 3, title: 'تواصل مع المشرف', url: 'https://contact.example.com/supervisor', icon: 'chat', description: 'قناة مباشرة للتواصل مع مشرف النشاط للإجابة على استفساراتكم.' },
+        { id: 1, title: 'نموذج تسجيل الأنشطة', url: 'https://forms.example.com/registration', icon: 'document', description: 'استخدم هذا النموذج لتسجيل اسمك في الأنشطة الطلابية المتاحة.', hidden: false },
+        { id: 2, title: 'جدول الفعاليات', url: 'https://calendar.example.com/events', icon: 'calendar', description: 'اطلع على جدول ومواعيد جميع الفعاليات والأنشطة القادمة.', hidden: false },
+        { id: 3, title: 'تواصل مع المشرف', url: 'https://contact.example.com/supervisor', icon: 'chat', description: 'قناة مباشرة للتواصل مع مشرف النشاط للإجابة على استفساراتكم.', hidden: false },
     ],
     announcements: [
         {
@@ -111,7 +115,8 @@ const DEFAULT_DATA = {
             date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
             location: 'معمل الحاسب الآلي - مبنى 5',
             registrationType: 'link' as const,
-            registrationUrl: 'https://forms.example.com/programming-workshop'
+            registrationUrl: 'https://forms.example.com/programming-workshop',
+            clubName: 'نادي البرمجة'
         },
         {
             id: 2,
@@ -122,7 +127,8 @@ const DEFAULT_DATA = {
             date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
             location: 'قاعة المعارض - مبنى الأنشطة',
             registrationType: 'link' as const,
-            registrationUrl: 'https://forms.example.com/art-fair'
+            registrationUrl: 'https://forms.example.com/art-fair',
+            clubName: 'نادي الفنون'
         },
         {
             id: 3,
@@ -143,7 +149,8 @@ const DEFAULT_DATA = {
             date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
             location: 'القاعة الكبرى',
             registrationType: 'link' as const,
-            registrationUrl: 'https://forms.example.com/hackathon'
+            registrationUrl: 'https://forms.example.com/hackathon',
+            clubName: 'نادي البرمجة'
         }
     ],
     themeConfig: {
@@ -170,6 +177,8 @@ const App: React.FC = () => {
     const [isLinkFormOpen, setIsLinkFormOpen] = useState(false);
     const [isAnnouncementFormOpen, setIsAnnouncementFormOpen] = useState(false);
     const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+    const [isStatisticsModalOpen, setIsStatisticsModalOpen] = useState(false);
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [editingLink, setEditingLink] = useState<LinkItem | null>(null);
     const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
     const [userRole, setUserRole] = useState<UserRole>('student');
@@ -391,7 +400,7 @@ const App: React.FC = () => {
             );
             addToast('تم تحديث الرابط بنجاح!');
         } else {
-            const newLink: LinkItem = { id: Date.now(), title, url, icon, description };
+            const newLink: LinkItem = { id: Date.now(), title, url, icon, description, hidden: false };
             setLinks(prevLinks => [...prevLinks, newLink]);
             addToast('تمت إضافة الرابط بنجاح!');
         }
@@ -424,6 +433,15 @@ const App: React.FC = () => {
 
     const handleReorderLinks = (reorderedLinks: LinkItem[]) => {
         setLinks(reorderedLinks);
+    };
+
+    const handleToggleLinkVisibility = (id: number) => {
+        setLinks(prevLinks =>
+            prevLinks.map(link =>
+                link.id === id ? { ...link, hidden: !link.hidden } : link
+            )
+        );
+        addToast(`تم ${links.find(l => l.id === id)?.hidden ? 'إظهار' : 'إخفاء'} الرابط.`, 'info');
     };
     
     const openAddForm = () => {
@@ -500,9 +518,11 @@ const App: React.FC = () => {
         );
     }
 
-    const filteredLinks = links.filter(link =>
-        link.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        link.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredLinks = links
+        .filter(link => userRole === 'student' ? !link.hidden : true)
+        .filter(link =>
+            link.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            link.description?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const filteredAnnouncements = announcements
@@ -590,6 +610,7 @@ const App: React.FC = () => {
                                     onDelete={handleDeleteLink} 
                                     onEdit={openEditForm}
                                     onReorder={handleReorderLinks}
+                                    onToggleVisibility={handleToggleLinkVisibility}
                                     userRole={userRole}
                                     searchQuery={searchQuery} 
                                 />
@@ -658,6 +679,20 @@ const App: React.FC = () => {
                                 >
                                     <ThemeIcon className="w-5 h-5" />
                                     <span>تخصيص المظهر</span>
+                                </button>
+                                <button
+                                    onClick={() => setIsStatisticsModalOpen(true)}
+                                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-card-bg)] text-[var(--color-text-primary)] font-semibold rounded-md hover:brightness-125 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-text-secondary)] shadow-lg transform hover:-translate-y-0.5"
+                                >
+                                    <ChartBarIcon className="w-5 h-5" />
+                                    <span>عرض الإحصائيات</span>
+                                </button>
+                                <button
+                                    onClick={() => setIsReportModalOpen(true)}
+                                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-card-bg)] text-[var(--color-text-primary)] font-semibold rounded-md hover:brightness-125 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-text-secondary)] shadow-lg transform hover:-translate-y-0.5"
+                                >
+                                    <DocumentTextIcon className="w-5 h-5" />
+                                    <span>إنشاء تقرير</span>
                                 </button>
                             </div>
 
@@ -738,6 +773,20 @@ const App: React.FC = () => {
                     imageUrl={viewingImage}
                     altText="صورة الإعلان"
                     onClose={() => setViewingImage(null)}
+                />
+            )}
+
+            {isStatisticsModalOpen && (
+                <StatisticsModal
+                    announcements={announcements}
+                    onClose={() => setIsStatisticsModalOpen(false)}
+                />
+            )}
+
+            {isReportModalOpen && (
+                <ReportModal
+                    announcements={announcements}
+                    onClose={() => setIsReportModalOpen(false)}
                 />
             )}
         </div>

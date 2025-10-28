@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 
 interface CountdownProps {
@@ -64,17 +65,17 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, onComplete, cardAccen
 
   if (isExpired) {
     return (
-       <div className="text-center bg-red-500/20 text-red-400 font-bold py-2 px-4 rounded-lg">
-            انتهى وقت الفعالية
+       <div className="text-center bg-red-500/20 text-red-400 font-bold py-2 px-4 rounded-lg text-sm">
+            انتهت الفعالية
        </div>
     );
   }
 
   return (
-    <div className="flex justify-center items-center gap-2 text-center" dir="ltr">
+    <div className="flex justify-center items-center gap-1.5 text-center" dir="ltr">
         {timerComponents.map(component => (
-            <div key={component.label} className="flex flex-col items-center justify-center bg-[var(--color-bg)] p-2 rounded-md w-16">
-                 <span className="text-xl font-bold tracking-widest" style={{fontFamily: 'monospace', color: cardAccentColor || 'var(--color-accent)'}}>
+            <div key={component.label} className="flex flex-col items-center justify-center bg-[var(--color-bg)] p-1 rounded-md w-14">
+                 <span className="text-lg font-bold tracking-widest" style={{fontFamily: 'monospace', color: cardAccentColor || 'var(--color-accent)'}}>
                     {String(component.value).padStart(2, '0')}
                  </span>
                  <span className="text-xs text-[var(--color-text-secondary)]">{component.label}</span>

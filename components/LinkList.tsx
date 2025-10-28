@@ -1,3 +1,4 @@
+
 import React, { useRef } from 'react';
 import type { LinkItem, UserRole } from '../types';
 import LinkCard from './LinkCard';
@@ -7,13 +8,14 @@ interface LinkListProps {
   onDelete: (id: number) => void;
   onEdit: (link: LinkItem) => void;
   onReorder: (reorderedLinks: LinkItem[]) => void;
+  onToggleVisibility: (id: number) => void;
   userRole: UserRole;
   searchQuery: string;
 }
 
 // FIX: The component was truncated, leading to syntax errors and a missing default export.
 // The full implementation with drag-and-drop reordering is provided below.
-const LinkList: React.FC<LinkListProps> = ({ links, onDelete, onEdit, onReorder, userRole, searchQuery }) => {
+const LinkList: React.FC<LinkListProps> = ({ links, onDelete, onEdit, onReorder, onToggleVisibility, userRole, searchQuery }) => {
   const dragItemIndex = useRef<number | null>(null);
   const dragOverItemIndex = useRef<number | null>(null);
 
@@ -83,6 +85,7 @@ const LinkList: React.FC<LinkListProps> = ({ links, onDelete, onEdit, onReorder,
                 link={link} 
                 onDelete={onDelete} 
                 onEdit={onEdit} 
+                onToggleVisibility={onToggleVisibility}
                 userRole={userRole}
                 isDraggable={isDraggable}
             />

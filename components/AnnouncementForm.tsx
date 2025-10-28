@@ -17,6 +17,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
   const [location, setLocation] = useState('');
   const [registrationType, setRegistrationType] = useState<'link' | 'open'>('link');
   const [registrationUrl, setRegistrationUrl] = useState('');
+  const [clubName, setClubName] = useState('');
   const [error, setError] = useState('');
 
   const isEditing = !!existingAnnouncement;
@@ -41,6 +42,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
       setLocation(existingAnnouncement.location);
       setRegistrationType(existingAnnouncement.registrationType || 'link');
       setRegistrationUrl(existingAnnouncement.registrationUrl || '');
+      setClubName(existingAnnouncement.clubName || '');
     }
   }, [existingAnnouncement, isEditing]);
 
@@ -75,6 +77,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
         location,
         registrationType,
         registrationUrl: registrationType === 'link' ? registrationUrl : undefined,
+        clubName: clubName.trim() || undefined,
     }, isEditing ? existingAnnouncement.id : null);
   };
 
@@ -99,6 +102,11 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
                     <option value="all">طلاب وطالبات</option>
                 </select>
             </div>
+        </div>
+        <div>
+          <label htmlFor="ann-club-name" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">اسم النادي (اختياري)</label>
+          <input id="ann-club-name" type="text" placeholder="مثال: نادي البرمجة" value={clubName} onChange={(e) => setClubName(e.target.value)}
+            className="w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)]" />
         </div>
          <div>
           <label htmlFor="ann-image-url" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">رابط الصورة</label>

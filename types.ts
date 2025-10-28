@@ -6,6 +6,7 @@ export interface LinkItem {
   url: string;
   icon: string;
   description?: string;
+  hidden?: boolean;
 }
 
 export interface Announcement {
@@ -18,6 +19,7 @@ export interface Announcement {
   location: string;
   registrationType: 'link' | 'open';
   registrationUrl?: string;
+  clubName?: string;
 }
 
 export type ToastType = 'success' | 'error' | 'info';

@@ -1,4 +1,6 @@
 import React from 'react';
+import { MegaphoneIcon } from './icons/MegaphoneIcon';
+import { LinkIcon } from './icons/LinkIcon';
 
 interface ViewSwitcherProps {
   activeView: 'links' | 'announcements';
@@ -10,23 +12,25 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ activeView, onSwitch }) => 
     <div className="flex p-1 bg-[var(--color-card-bg)] rounded-full border border-[var(--color-border)]">
       <button
         onClick={() => onSwitch('announcements')}
-        className={`px-6 py-2 text-sm font-semibold rounded-full focus:outline-none transition-colors duration-300 ${
+        className={`flex items-center justify-center gap-2 px-5 py-2 text-sm font-semibold rounded-full focus:outline-none transition-all duration-300 ${
           activeView === 'announcements'
-            ? 'bg-[var(--color-accent)] text-white'
+            ? 'bg-[var(--color-accent)] text-white shadow-md'
             : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
         }`}
       >
-        إعلانات الأندية
+        <MegaphoneIcon className="w-5 h-5" />
+        <span>الإعلانات</span>
       </button>
       <button
         onClick={() => onSwitch('links')}
-        className={`px-6 py-2 text-sm font-semibold rounded-full focus:outline-none transition-colors duration-300 ${
+        className={`flex items-center justify-center gap-2 px-5 py-2 text-sm font-semibold rounded-full focus:outline-none transition-all duration-300 ${
           activeView === 'links'
-            ? 'bg-[var(--color-accent)] text-white'
+            ? 'bg-[var(--color-accent)] text-white shadow-md'
             : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
         }`}
       >
-        الروابط
+        <LinkIcon className="w-5 h-5" />
+        <span>الروابط</span>
       </button>
     </div>
   );
