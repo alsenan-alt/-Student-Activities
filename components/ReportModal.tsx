@@ -122,7 +122,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ announcements, onClose }) => 
                     <div key={clubName} className="mb-6">
                         <h2 className="text-lg font-bold text-[var(--color-accent)] mb-2">{clubName} ({clubAnnouncements.length} إعلانات)</h2>
                         <div className="overflow-x-auto">
-                             <table className="w-full text-sm">
+                             <table className="w-full text-sm report-table">
                                 <thead className="bg-[var(--color-card-bg)]">
                                     <tr>
                                         <th className="p-2 font-semibold">النشاط</th>

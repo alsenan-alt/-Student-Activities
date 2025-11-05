@@ -112,15 +112,15 @@ const StatisticsModal: React.FC<StatisticsModalProps> = ({ announcements, onClos
 
                 <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 pb-4">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                        <div className="bg-[var(--color-bg)] p-4 rounded-lg border border-[var(--color-border)]">
+                        <div className="bg-[var(--color-bg)] p-4 rounded-lg border border-[var(--color-border)] stats-card">
                             <h3 className="font-semibold text-sm text-[var(--color-text-secondary)]">إجمالي الإعلانات</h3>
                             <span className="text-3xl font-bold font-mono text-[var(--color-text-primary)]">{stats.total}</span>
                         </div>
-                         <div className="bg-[var(--color-bg)] p-4 rounded-lg border border-[var(--color-border)]">
+                         <div className="bg-[var(--color-bg)] p-4 rounded-lg border border-[var(--color-border)] stats-card">
                             <h3 className="font-semibold text-sm text-[var(--color-text-secondary)]">إعلانات الطلاب</h3>
                             <span className="text-3xl font-bold font-mono" style={{color: getCategoryInfo('male').color}}>{stats.byCategory.male}</span>
                         </div>
-                         <div className="bg-[var(--color-bg)] p-4 rounded-lg border border-[var(--color-border)]">
+                         <div className="bg-[var(--color-bg)] p-4 rounded-lg border border-[var(--color-border)] stats-card">
                             <h3 className="font-semibold text-sm text-[var(--color-text-secondary)]">إعلانات الطالبات</h3>
                             <span className="text-3xl font-bold font-mono" style={{color: getCategoryInfo('female').color}}>{stats.byCategory.female}</span>
                         </div>
@@ -138,7 +138,7 @@ const StatisticsModal: React.FC<StatisticsModalProps> = ({ announcements, onClos
                             <div className="px-4 pb-4 space-y-3 border-t border-[var(--color-border)]">
                                 <div className="pt-3">
                                     <h4 className="font-semibold text-[var(--color-text-primary)] mb-2">توزيع الأنشطة</h4>
-                                    <div className="w-full flex rounded-full overflow-hidden bg-[var(--color-card-bg)] h-6 text-xs text-white font-bold">
+                                    <div className="w-full flex rounded-full overflow-hidden bg-[var(--color-card-bg)] h-6 text-xs text-white font-bold print-distribution-bar">
                                         {clubData.male.count > 0 && <div style={{width: `${(clubData.male.count / clubData.total) * 100}%`, backgroundColor: getCategoryInfo('male').color}} className="flex items-center justify-center">{clubData.male.count}</div>}
                                         {clubData.female.count > 0 && <div style={{width: `${(clubData.female.count / clubData.total) * 100}%`, backgroundColor: getCategoryInfo('female').color}} className="flex items-center justify-center">{clubData.female.count}</div>}
                                         {clubData.all.count > 0 && <div style={{width: `${(clubData.all.count / clubData.total) * 100}%`, backgroundColor: getCategoryInfo('all').color}} className="flex items-center justify-center">{clubData.all.count}</div>}
