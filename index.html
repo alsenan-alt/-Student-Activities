@@ -190,6 +190,7 @@
         body.is-printing .printable-area h4,
         body.is-printing .printable-area p,
         body.is-printing .printable-area span,
+        body.is-printing .printable-area ul,
         body.is-printing .printable-area li,
         body.is-printing .printable-area table,
         body.is-printing .printable-area thead,
@@ -197,95 +198,65 @@
         body.is-printing .printable-area tr,
         body.is-printing .printable-area th,
         body.is-printing .printable-area td {
+            background: transparent !important;
             color: #000 !important;
-            background-color: transparent !important;
-            background-image: none !important;
-            border-color: #ddd !important;
             box-shadow: none !important;
+            border-color: #ccc !important;
+            text-shadow: none !important;
         }
         
-        body.is-printing .printable-area div[class*="overflow-y-auto"] {
-            max-height: none !important;
-            overflow: visible !important;
+        body.is-printing .stats-card {
+            border: 1px solid #ccc !important;
         }
 
-        /* --- Statistics Modal Specific Print Styles --- */
-        body.is-printing .printable-area .stats-card {
-            background-color: #f9f9f9 !important;
-            border: 1px solid #ccc !important;
-        }
-        body.is-printing .printable-area details {
-            border: 1px solid #ccc !important;
-            margin-bottom: 1rem;
-            page-break-inside: avoid;
-        }
-        body.is-printing .printable-area summary {
-            padding: 0.75rem !important;
-            border-bottom: 1px solid #ccc !important;
-        }
-        body.is-printing .printable-area .print-distribution-bar {
-            border: 1px solid #ccc !important;
-        }
-        body.is-printing .printable-area .print-distribution-bar > div {
-            color: #000 !important;
-            background-color: #f0f0f0 !important;
-            border-right: 1px solid #ccc !important;
-        }
-        body.is-printing .printable-area .print-distribution-bar > div:last-child {
-            border-right: none !important;
+        body.is-printing .print-distribution-bar {
+            background-image: linear-gradient(to right, #e0e0e0, #f0f0f0) !important;
         }
         
-        /* --- Report Modal Specific Print Styles --- */
-        body.is-printing .printable-area table {
-            width: 100%;
+        body.is-printing .report-table {
             border-collapse: collapse;
-            margin-top: 1rem;
-            page-break-inside: auto;
         }
-        body.is-printing .printable-area tr {
-            page-break-inside: avoid;
-            page-break-after: auto;
-        }
-        body.is-printing .printable-area th, 
-        body.is-printing .printable-area td {
-            border: 1px solid #ddd;
+        body.is-printing .report-table th,
+        body.is-printing .report-table td {
+            border: 1px solid #ccc;
             padding: 8px;
             text-align: right;
         }
-        body.is-printing .printable-area th {
-            background-color: #f2f2f2 !important;
-            font-weight: bold;
-        }
-        body.is-printing .printable-area .no-print-border {
-            border: none !important;
+
+        /* --- Report Table Column Sizing for Print --- */
+        body.is-printing .report-table {
+            table-layout: fixed; /* Important for respecting column widths */
+            width: 100%;
         }
 
-        /* Adjust column widths for the report table */
-        body.is-printing .report-table th:nth-of-type(1),
-        body.is-printing .report-table td:nth-of-type(1) {
-            width: 50%;
+        body.is-printing .report-table th:nth-child(1),
+        body.is-printing .report-table td:nth-child(1) {
+            width: 70%; /* النشاط - Widest */
+            word-wrap: break-word; /* Allow long words to break */
         }
-        body.is-printing .report-table th:nth-of-type(2),
-        body.is-printing .report-table td:nth-of-type(2) {
-            width: 15%;
+
+        body.is-printing .report-table th:nth-child(3),
+        body.is-printing .report-table td:nth-child(3) {
+            width: 8%;  /* المكان - Narrowest */
+            word-wrap: break-word;
         }
-        body.is-printing .report-table th:nth-of-type(3),
-        body.is-printing .report-table td:nth-of-type(3) {
-            width: 25%;
+
+        body.is-printing .report-table th:nth-child(2), /* التاريخ */
+        body.is-printing .report-table td:nth-child(2),
+        body.is-printing .report-table th:nth-child(4), /* الفئة */
+        body.is-printing .report-table td:nth-child(4) {
+            width: 11%; /* Distribute remaining space */
+            word-wrap: break-word;
         }
-        body.is-printing .report-table th:nth-of-type(4),
-        body.is-printing .report-table td:nth-of-type(4) {
-            width: 10%;
-        }
+
       }
     </style>
   <script type="importmap">
 {
   "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
     "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
   }
 }
 </script>
