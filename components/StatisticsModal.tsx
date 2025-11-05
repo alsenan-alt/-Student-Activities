@@ -74,15 +74,29 @@ const StatisticsModal: React.FC<StatisticsModalProps> = ({ announcements, onClos
         if (!content) return;
 
         const allDetails = content.querySelectorAll('details');
-        allDetails.forEach(details => details.open = true);
 
-        content.classList.add('printable-area');
-        document.body.classList.add('is-printing');
+        // This function will be called right before the print dialog opens.
+        const handleBeforePrint = () => {
+            allDetails.forEach(details => (details.open = true));
+            content.classList.add('printable-area');
+            document.body.classList.add('is-printing');
+        };
+
+        // This function will be called after the print dialog is closed.
+        const handleAfterPrint = () => {
+            document.body.classList.remove('is-printing');
+            content.classList.remove('printable-area');
+            allDetails.forEach(details => (details.open = false));
+            
+            // Clean up the event listeners
+            window.removeEventListener('beforeprint', handleBeforePrint);
+            window.removeEventListener('afterprint', handleAfterPrint);
+        };
+
+        window.addEventListener('beforeprint', handleBeforePrint);
+        window.addEventListener('afterprint', handleAfterPrint);
+
         window.print();
-        document.body.classList.remove('is-printing');
-        content.classList.remove('printable-area');
-        
-        allDetails.forEach(details => details.open = false);
     };
 
     return (
