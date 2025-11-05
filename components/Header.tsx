@@ -13,7 +13,7 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, titleSize, headerIcon,
     const IconComponent = getIconComponent(headerIcon);
     return (
         <header className="text-center mb-10">
-            <div className="inline-flex items-center justify-center bg-[var(--color-card-bg)] p-4 rounded-full shadow-lg mb-4">
+            <div className="inline-flex items-center justify-center bg-[var(--color-card-bg)] p-4 rounded-full shadow-lg mb-4 print-hide">
                 <IconComponent className="w-12 h-12 text-[var(--color-accent)]" />
             </div>
             <h1 

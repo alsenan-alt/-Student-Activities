@@ -26,7 +26,7 @@ const AnnouncementList: React.FC<AnnouncementListProps> = ({ announcements, user
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 announcement-list-container">
       {announcements.map((ann) => (
         <AnnouncementCard
           key={ann.id}

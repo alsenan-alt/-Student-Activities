@@ -27,6 +27,7 @@ import { ChartBarIcon } from './components/icons/ChartBarIcon';
 import StatisticsModal from './components/StatisticsModal';
 import { DocumentTextIcon } from './components/icons/DocumentTextIcon';
 import ReportModal from './components/ReportModal';
+import { TableCellsIcon } from './components/icons/TableCellsIcon';
 
 const DATA_SOURCE_URL = 'https://gist.githubusercontent.com/alsenan-alt/90667b2526764f93d35e6328b72d0c4b/raw/student-activity-data.json'; 
 
@@ -559,10 +560,77 @@ const App: React.FC = () => {
         currentPage * ITEMS_PER_PAGE
     );
 
+    const handleExportCSV = () => {
+        if (filteredAnnouncements.length === 0) {
+            addToast('لا توجد إعلانات لتصديرها.', 'info');
+            return;
+        }
+
+        const headers = [
+            'العنوان', 'الفئة', 'اسم النادي', 'التاريخ', 'الوقت', 
+            'المكان', 'التفاصيل', 'نوع التسجيل', 'رابط التسجيل'
+        ];
+        
+        const getCategoryText = (category: 'male' | 'female' | 'all') => {
+            switch (category) {
+                case 'male': return 'طلاب';
+                case 'female': return 'طالبات';
+                case 'all': return 'الجميع';
+                default: return 'غير محدد';
+            }
+        };
+
+        const escapeCSV = (field: string | undefined) => {
+            if (field === null || field === undefined) return '';
+            const str = String(field);
+            // If the field contains a comma, double quote, or newline, wrap it in double quotes.
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                // Within a double-quoted field, any double quote must be escaped by another double quote.
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+        };
+
+        const rows = filteredAnnouncements.map(ann => {
+            const eventDate = new Date(ann.date);
+            const formattedDate = eventDate.toLocaleDateString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit' });
+            const formattedTime = eventDate.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+            return [
+                escapeCSV(ann.title),
+                escapeCSV(getCategoryText(ann.category)),
+                escapeCSV(ann.clubName),
+                escapeCSV(formattedDate),
+                escapeCSV(formattedTime),
+                escapeCSV(ann.location),
+                escapeCSV(ann.details),
+                escapeCSV(ann.registrationType === 'link' ? 'رابط' : 'مفتوح'),
+                escapeCSV(ann.registrationUrl)
+            ].join(',');
+        });
+
+        const csvContent = [headers.join(','), ...rows].join('\n');
+        
+        // Add BOM for Excel to recognize UTF-8
+        const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+        const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const today = new Date().toISOString().slice(0, 10);
+        link.href = url;
+        link.download = `announcements_report_${today}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        addToast('تم تصدير الإعلانات بنجاح.');
+    };
 
     return (
         <div className="min-h-screen p-4 sm:p-6 md:p-8">
-            <ToastContainer toasts={toasts} onDismiss={removeToast} />
+            <div className="print-hide">
+                <ToastContainer toasts={toasts} onDismiss={removeToast} />
+            </div>
             <div className="container mx-auto max-w-5xl">
                 <Header 
                     title={themeConfig.title} 
@@ -571,9 +639,11 @@ const App: React.FC = () => {
                     headerIcon={themeConfig.headerIcon}
                     titleFont={themeConfig.titleFont} 
                 />
-                <RoleSwitcher currentRole={userRole} onRoleChange={handleRoleChangeRequest} />
+                <div className="print-hide">
+                    <RoleSwitcher currentRole={userRole} onRoleChange={handleRoleChangeRequest} />
+                </div>
                 <main>
-                    <div className="flex justify-center items-center gap-4 mb-6">
+                    <div className="flex justify-center items-center gap-4 mb-6 print-hide">
                         <ViewSwitcher activeView={activeView} onSwitch={setActiveView} />
                         <button
                             onClick={() => loadInitialData(true)}
@@ -588,12 +658,12 @@ const App: React.FC = () => {
 
                     {activeView === 'links' && (
                         <>
-                            <div className="mb-8">
+                            <div className="mb-8 print-hide">
                                 <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="ابحث عن رابط..." />
                             </div>
 
                             {userRole === 'admin' && (
-                                <div className="mb-8 flex flex-col items-center gap-6">
+                                <div className="mb-8 flex flex-col items-center gap-6 print-hide">
                                     <button
                                         onClick={openAddForm}
                                         className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-accent)] text-white font-semibold rounded-md hover:brightness-90 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-accent)] shadow-lg hover:shadow-[var(--color-accent)]/30 transform hover:-translate-y-0.5"
@@ -620,17 +690,19 @@ const App: React.FC = () => {
                     
                     {activeView === 'announcements' && (
                         <div>
-                            <AnnouncementFilters
-                                category={announcementCategory}
-                                onCategoryChange={setAnnouncementCategory}
-                                searchQuery={announcementSearchQuery}
-                                onSearchChange={setAnnouncementSearchQuery}
-                                showTodays={showTodaysAnnouncements}
-                                onShowTodaysChange={setShowTodaysAnnouncements}
-                            />
+                            <div className="print-hide">
+                                <AnnouncementFilters
+                                    category={announcementCategory}
+                                    onCategoryChange={setAnnouncementCategory}
+                                    searchQuery={announcementSearchQuery}
+                                    onSearchChange={setAnnouncementSearchQuery}
+                                    showTodays={showTodaysAnnouncements}
+                                    onShowTodaysChange={setShowTodaysAnnouncements}
+                                />
+                            </div>
                             
                             {userRole === 'admin' && (
-                                <div className="mb-8 flex justify-center">
+                                <div className="mb-8 flex justify-center print-hide">
                                      <button
                                         onClick={openAddAnnouncementForm}
                                         className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-accent)] text-white font-semibold rounded-md hover:brightness-90 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-accent)] shadow-lg hover:shadow-[var(--color-accent)]/30 transform hover:-translate-y-0.5"
@@ -650,7 +722,7 @@ const App: React.FC = () => {
                                 searchQuery={announcementSearchQuery}
                              />
                              {totalPages > 1 && (
-                                <div className="mt-8">
+                                <div className="mt-8 print-hide">
                                     <Pagination 
                                         currentPage={currentPage}
                                         totalPages={totalPages}
@@ -663,7 +735,7 @@ const App: React.FC = () => {
 
 
                     {userRole === 'admin' && (
-                        <div className="mt-16 pt-8 border-t border-[var(--color-border)] flex flex-col items-center gap-6">
+                        <div className="mt-16 pt-8 border-t border-[var(--color-border)] flex flex-col items-center gap-6 print-hide">
                              <DataSourceStatus url={DATA_SOURCE_URL} isLoading={isRefreshing || isLoading} error={fetchError} />
                             <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-4">
                                 <button
@@ -694,6 +766,13 @@ const App: React.FC = () => {
                                     <DocumentTextIcon className="w-5 h-5" />
                                     <span>إنشاء تقرير</span>
                                 </button>
+                                 <button
+                                    onClick={handleExportCSV}
+                                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-card-bg)] text-[var(--color-text-primary)] font-semibold rounded-md hover:brightness-125 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-text-secondary)] shadow-lg transform hover:-translate-y-0.5"
+                                >
+                                    <TableCellsIcon className="w-5 h-5" />
+                                    <span>تصدير كـ CSV</span>
+                                </button>
                             </div>
 
                             <div className="w-full max-w-xl p-4 rounded-lg bg-[var(--color-card-bg)] border border-[var(--color-border)] text-center">
@@ -721,7 +800,7 @@ const App: React.FC = () => {
                         </div>
                     )}
                 </main>
-                <footer className="text-center text-[var(--color-text-secondary)] mt-12 py-4">
+                <footer className="text-center text-[var(--color-text-secondary)] mt-12 py-4 print-hide">
                     <p>&copy; {new Date().getFullYear()} {themeConfig.title}. كل الحقوق محفوظة.</p>
                 </footer>
             </div>

@@ -43,11 +43,11 @@ const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, userR
 
     return (
     <div 
-        className="group relative flex flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] shadow-lg transition-all duration-300 ease-in-out overflow-hidden animate-fade-in-up hover:-translate-y-1"
+        className="group relative flex flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] shadow-lg transition-all duration-300 ease-in-out overflow-hidden animate-fade-in-up hover:-translate-y-1 announcement-card-print-container"
         style={{ '--card-accent-color': cardAccentColor } as React.CSSProperties}
     >
       <div
-        className="absolute -inset-1 rounded-xl opacity-0 transition-opacity duration-300 group-hover:opacity-30 blur-lg pointer-events-none"
+        className="absolute -inset-1 rounded-xl opacity-0 transition-opacity duration-300 group-hover:opacity-30 blur-lg pointer-events-none print-hide"
         style={{ backgroundColor: 'var(--card-accent-color)' }}
         aria-hidden="true"
       ></div>
@@ -62,7 +62,7 @@ const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, userR
               decoding="async"
               onError={(e) => (e.currentTarget.src = 'https://placehold.co/600x400/1f2937/9ca3af?text=Image+Not+Found')}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent print-hide"></div>
           </div>
 
           <div className="p-5 flex flex-col flex-grow">
@@ -87,7 +87,7 @@ const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, userR
                     )}
                 </div>
                 {userRole === 'admin' && (
-                  <div className="flex-shrink-0 flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity duration-300" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex-shrink-0 flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity duration-300 print-hide" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => onEdit(announcement)}
                       className="text-[var(--color-text-secondary)] hover:text-blue-500 transition-all duration-300 p-2 rounded-full hover:bg-blue-500/10"
@@ -107,7 +107,7 @@ const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, userR
             </div>
             
             <div className="text-[var(--color-text-secondary)] text-sm mb-4 flex-grow">
-                <p className="inline">
+                <p className="inline print-hide">
                     {displayedDescription}
                     {isLongDescription && (
                         <button 
@@ -117,6 +117,9 @@ const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, userR
                             {isExpanded ? 'اقرأ أقل' : 'اقرأ المزيد'}
                         </button>
                     )}
+                </p>
+                <p className="hidden print-show-block">
+                    {announcement.details}
                 </p>
             </div>
             
@@ -135,7 +138,7 @@ const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, userR
                 </div>
             </div>
 
-            <div className="mb-5 mt-auto flex flex-col items-center">
+            <div className="mb-5 mt-auto flex flex-col items-center print-hide">
                 <h4 className="text-center text-xs font-semibold text-[var(--color-text-secondary)] mb-2">الوقت المتبقي للفعالية</h4>
                 <Countdown targetDate={announcement.date} onComplete={() => {}} cardAccentColor={cardAccentColor} />
             </div>
@@ -146,12 +149,12 @@ const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, userR
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ backgroundColor: cardAccentColor, '--tw-ring-color': cardAccentColor } as React.CSSProperties}
-                className="block w-full text-center px-6 py-3 text-white font-semibold rounded-md hover:brightness-90 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-card-bg)]"
+                className="block w-full text-center px-6 py-3 text-white font-semibold rounded-md hover:brightness-90 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-card-bg)] print-hide"
                 >
                 رابط التسجيل
                 </a>
             ) : (
-                <div className="flex items-center justify-center gap-2 text-center px-6 py-3 bg-transparent border-2 border-dashed border-[var(--color-border)] text-[var(--color-text-secondary)] font-semibold rounded-md">
+                <div className="flex items-center justify-center gap-2 text-center px-6 py-3 bg-transparent border-2 border-dashed border-[var(--color-border)] text-[var(--color-text-secondary)] font-semibold rounded-md print-hide">
                     <UsersIcon className="w-5 h-5" />
                     <span>بدون تسجيل (متاح)</span>
                 </div>

@@ -72,6 +72,143 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
+      @media print {
+        @page {
+          size: A4;
+          margin: 1.5cm;
+        }
+
+        body {
+          background: #fff !important;
+          color: #000 !important;
+          font-size: 11pt;
+        }
+
+        /* --- Global Print Utilities --- */
+        .print-hide {
+          display: none !important;
+        }
+        .print-show-block {
+          display: block !important;
+        }
+        .bg-clip-text {
+            -webkit-background-clip: unset !important;
+            background-clip: unset !important;
+            background-image: none !important;
+        }
+        .text-transparent {
+            color: inherit !important;
+        }
+        a {
+            text-decoration: none;
+            color: #000 !important;
+        }
+        .announcement-card-print-container a[href]::after {
+             content: "" !important; /* Do not show URL for registration button */
+        }
+        
+        /* --- App Structure for Print --- */
+        #root .container {
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        header h1 {
+            font-size: 24pt !important;
+        }
+        header p {
+            font-size: 12pt !important;
+        }
+        
+        /* --- Announcement List & Card Specific Styles --- */
+        .announcement-list-container {
+            display: block !important; /* Override grid layout */
+            gap: 0 !important;
+        }
+
+        .announcement-card-print-container {
+            page-break-inside: avoid !important;
+            margin-bottom: 1.5rem;
+            border: 1px solid #ddd !important;
+            box-shadow: none !important;
+            transform: none !important;
+            background: #fff !important;
+            overflow: hidden;
+        }
+
+        .announcement-card-print-container img {
+            max-height: 250px !important;
+            width: 100% !important;
+            object-fit: contain !important; /* Show full image, no crop */
+            border-bottom: 1px solid #ddd;
+        }
+
+        .announcement-card-print-container h3,
+        .announcement-card-print-container p,
+        .announcement-card-print-container span {
+            color: #000 !important;
+        }
+
+        /* --- Styles for Modal Printing --- */
+        body.is-printing * {
+          visibility: hidden;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        body.is-printing .printable-area, 
+        body.is-printing .printable-area * {
+          visibility: visible;
+        }
+        body.is-printing .printable-area {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          margin: 0;
+          padding: 1.5rem;
+          font-size: 12pt;
+          background: #fff !important;
+          color: #000 !important;
+        }
+        body.is-printing .printable-area h1,
+        body.is-printing .printable-area h2,
+        body.is-printing .printable-area h3,
+        body.is-printing .printable-area p,
+        body.is-printing .printable-area span {
+            color: #000 !important;
+            background: none !important;
+        }
+        body.is-printing .printable-area .print-hide {
+            display: none !important;
+        }
+        body.is-printing .printable-area a {
+            text-decoration: none;
+            color: #000 !important;
+        }
+        body.is-printing .printable-area table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            page-break-inside: auto;
+        }
+        body.is-printing .printable-area tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+        body.is-printing .printable-area th, 
+        body.is-printing .printable-area td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: right;
+        }
+        body.is-printing .printable-area th {
+            background-color: #f2f2f2 !important;
+            font-weight: bold;
+        }
+        body.is-printing .printable-area .no-print-border {
+            border: none !important;
+        }
+      }
     </style>
   <script type="importmap">
 {
