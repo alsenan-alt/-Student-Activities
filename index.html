@@ -75,7 +75,7 @@
       @media print {
         @page {
           size: A4;
-          margin: 1cm;
+          margin: 0.7cm;
         }
 
         body {
@@ -159,15 +159,26 @@
         body.is-printing .printable-area * {
           visibility: visible;
         }
+        
+        /* Un-constrain the modal box parent during print */
+        body.is-printing .modal-box {
+            max-width: none !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: transparent !important;
+        }
+        
         body.is-printing .printable-area {
-          /* FIX: Removed absolute positioning to allow natural document flow and page breaks */
           position: static;
           width: 100%;
           margin: 0;
-          padding: 0; /* Rely on @page margin instead of padding */
+          padding: 0;
           color: #000 !important;
         }
-        /* FIX: Ensure scrollable content inside modals is fully visible when printing */
+        
         body.is-printing .printable-area div[class*="overflow-y-auto"] {
             max-height: none !important;
             overflow: visible !important;

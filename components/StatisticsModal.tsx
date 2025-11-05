@@ -100,7 +100,7 @@ const StatisticsModal: React.FC<StatisticsModalProps> = ({ announcements, onClos
     };
 
     return (
-        <Modal onClose={onClose}>
+        <Modal onClose={onClose} size="4xl">
             <div ref={statsContentRef}>
                 <div className="text-center mb-6">
                     <div className="inline-flex items-center justify-center bg-[var(--color-bg)] p-3 rounded-full mb-4 print-hide">

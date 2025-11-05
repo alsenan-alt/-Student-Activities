@@ -95,7 +95,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ announcements, onClose }) => 
     };
 
     return (
-        <Modal onClose={onClose}>
+        <Modal onClose={onClose} size="4xl">
             <div className="text-center mb-6 print-hide">
                  <div className="inline-flex items-center justify-center bg-[var(--color-bg)] p-3 rounded-full mb-4">
                     <DocumentTextIcon className="w-8 h-8 text-[var(--color-accent)]" />

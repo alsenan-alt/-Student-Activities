@@ -4,10 +4,19 @@ import { XIcon } from './icons/XIcon';
 interface ModalProps {
   onClose: () => void;
   children: React.ReactNode;
+  size?: 'md' | 'lg' | '2xl' | '4xl' | '5xl';
 }
 
-const Modal: React.FC<ModalProps> = ({ onClose, children }) => {
+const Modal: React.FC<ModalProps> = ({ onClose, children, size = 'lg' }) => {
   const modalRef = useRef<HTMLDivElement>(null);
+
+  const sizeClasses = {
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    '2xl': 'max-w-2xl',
+    '4xl': 'max-w-4xl',
+    '5xl': 'max-w-5xl',
+  };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -45,11 +54,11 @@ const Modal: React.FC<ModalProps> = ({ onClose, children }) => {
     >
       <div
         ref={modalRef}
-        className="bg-[var(--color-card-bg)] rounded-lg shadow-xl p-6 w-full max-w-lg relative animate-fade-in-up"
+        className={`modal-box bg-[var(--color-card-bg)] rounded-lg shadow-xl p-6 w-full ${sizeClasses[size]} relative animate-fade-in-up`}
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+          className="absolute top-4 right-4 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors print-hide"
           aria-label="إغلاق"
         >
           <XIcon className="w-6 h-6" />

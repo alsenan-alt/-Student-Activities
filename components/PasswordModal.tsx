@@ -31,7 +31,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({ onClose, onVerify }) => {
   };
 
   return (
-    <Modal onClose={handleClose}>
+    <Modal onClose={handleClose} size="md">
       <div className="text-center">
         <div className="inline-flex items-center justify-center bg-[var(--color-bg)] p-3 rounded-full mb-4">
           <LockIcon className="w-8 h-8 text-[var(--color-accent)]" />
