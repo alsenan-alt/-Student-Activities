@@ -2,8 +2,6 @@ import React, { useMemo, useState, useRef } from 'react';
 import type { Announcement } from '../types';
 import Modal from './Modal';
 import { DocumentTextIcon } from './icons/DocumentTextIcon';
-import { ClipboardIcon } from './icons/ClipboardIcon';
-import { CheckCircleIcon } from './icons/CheckCircleIcon';
 import { PrinterIcon } from './icons/PrinterIcon';
 
 interface ReportModalProps {
@@ -21,108 +19,165 @@ const getCategoryText = (category: 'male' | 'female' | 'all') => {
 };
 
 const ReportModal: React.FC<ReportModalProps> = ({ announcements, onClose }) => {
-    const [isCopied, setIsCopied] = useState(false);
     const reportContentRef = useRef<HTMLDivElement>(null);
+    const today = new Date().toISOString().split('T')[0];
 
-    const organizedAnnouncements = useMemo(() => {
-        const byClub = announcements.reduce((acc, ann) => {
-            const club = ann.clubName?.trim() || 'بدون نادي';
-            if (!acc[club]) {
-                acc[club] = [];
-            }
-            acc[club].push(ann);
-            return acc;
-        }, {} as Record<string, Announcement[]>);
-        
-        return Object.entries(byClub).sort((a, b) => a[0].localeCompare(b[0]));
+    // Filters State
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState(today);
+    const [selectedCategories, setSelectedCategories] = useState<('male' | 'female' | 'all')[]>(['male', 'female', 'all']);
+    const [selectedClubs, setSelectedClubs] = useState<string[]>([]);
+
+    const uniqueClubs = useMemo(() => {
+        const clubs = new Set(announcements.map(a => a.clubName?.trim() || 'بدون نادي'));
+        return Array.from(clubs).sort();
     }, [announcements]);
 
-    const reportTextForCopy = useMemo(() => {
-        let report = `تقرير الأنشطة الطلابية\n`;
-        report += `====================\n\n`;
+    // Initialize selected clubs to all unique clubs on first render
+    useState(() => {
+        setSelectedClubs(uniqueClubs);
+    }, [uniqueClubs]);
 
-        if (organizedAnnouncements.length === 0) {
-            return report + "لا توجد إعلانات لإنشاء تقرير.";
-        }
-
-        organizedAnnouncements.forEach(([clubName, clubAnnouncements]) => {
-            report += `** ${clubName} **\n`;
-            report += `إجمالي الإعلانات: ${clubAnnouncements.length}\n\n`;
-            clubAnnouncements.forEach(ann => {
+    const filteredAnnouncements = useMemo(() => {
+        return announcements
+            .filter(ann => {
                 const eventDate = new Date(ann.date);
-                const formattedDate = eventDate.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
-                report += `- ${ann.title} (الفئة: ${getCategoryText(ann.category)}, التاريخ: ${formattedDate})\n`;
-            });
-            report += `\n--------------------\n\n`;
-        });
-
-        return report;
-    }, [organizedAnnouncements]);
+                if (startDate) {
+                    const start = new Date(startDate);
+                    start.setHours(0, 0, 0, 0);
+                    if (eventDate < start) return false;
+                }
+                if (endDate) {
+                    const end = new Date(endDate);
+                    end.setHours(23, 59, 59, 999);
+                    if (eventDate > end) return false;
+                }
+                return true;
+            })
+            .filter(ann => selectedCategories.includes(ann.category))
+            .filter(ann => selectedClubs.includes(ann.clubName?.trim() || 'بدون نادي'));
+    }, [announcements, startDate, endDate, selectedCategories, selectedClubs]);
     
-    const handleCopy = () => {
-        navigator.clipboard.writeText(reportTextForCopy).then(() => {
-            setIsCopied(true);
-            setTimeout(() => setIsCopied(false), 2000);
-        }).catch(err => {
-            console.error('Failed to copy text: ', err);
-        });
+    const handleCategoryChange = (category: 'male' | 'female' | 'all') => {
+        setSelectedCategories(prev =>
+            prev.includes(category)
+                ? prev.filter(c => c !== category)
+                : [...prev, category]
+        );
+    };
+
+    const handleClubChange = (clubName: string) => {
+        setSelectedClubs(prev => 
+            prev.includes(clubName)
+                ? prev.filter(c => c !== clubName)
+                : [...prev, clubName]
+        );
+    };
+
+    const resetFilters = () => {
+        setStartDate('');
+        setEndDate(today);
+        setSelectedCategories(['male', 'female', 'all']);
+        setSelectedClubs(uniqueClubs);
     };
 
     const handlePrint = () => {
         const content = reportContentRef.current;
         if (!content) return;
-
-        // This function will be called right before the print dialog opens.
+        
         const handleBeforePrint = () => {
             content.classList.add('printable-area');
             document.body.classList.add('is-printing');
         };
-
-        // This function will be called after the print dialog is closed.
         const handleAfterPrint = () => {
             document.body.classList.remove('is-printing');
             content.classList.remove('printable-area');
-            
-            // Clean up the event listeners
             window.removeEventListener('beforeprint', handleBeforePrint);
             window.removeEventListener('afterprint', handleAfterPrint);
         };
 
         window.addEventListener('beforeprint', handleBeforePrint);
         window.addEventListener('afterprint', handleAfterPrint);
-
         window.print();
     };
 
     return (
-        <Modal onClose={onClose} size="4xl">
-            <div className="text-center mb-6 print-hide">
-                 <div className="inline-flex items-center justify-center bg-[var(--color-bg)] p-3 rounded-full mb-4">
-                    <DocumentTextIcon className="w-8 h-8 text-[var(--color-accent)]" />
-                </div>
-                <h2 className="text-2xl font-bold text-[var(--color-accent)]">تقرير الأنشطة</h2>
-                <p className="text-[var(--color-text-secondary)]">تقرير مُنسّق جاهز للطباعة والمشاركة.</p>
-            </div>
+        <Modal onClose={onClose} size="5xl">
+            <div className="flex flex-col md:flex-row gap-6">
+                {/* Filters Section */}
+                <div className="w-full md:w-1/3 bg-[var(--color-bg)] p-4 rounded-lg border border-[var(--color-border)] h-full md:max-h-[70vh] overflow-y-auto print-hide report-filters-container">
+                    <h3 className="text-lg font-bold text-[var(--color-accent)] mb-4">خيارات التقرير</h3>
+                    <div className="space-y-4">
+                        {/* Date Range */}
+                        <div>
+                            <label className="text-sm font-semibold text-[var(--color-text-secondary)]">النطاق الزمني</label>
+                            <div className="flex flex-col gap-2 mt-1">
+                                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-md p-2 text-sm" placeholder="من تاريخ"/>
+                                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-md p-2 text-sm" placeholder="إلى تاريخ"/>
+                            </div>
+                        </div>
 
-            <div 
-                ref={reportContentRef}
-                className="bg-[var(--color-bg)] p-4 rounded-lg border border-[var(--color-border)] max-h-80 overflow-y-auto text-right text-[var(--color-text-primary)]"
-            >
-                <div className="no-print-border">
-                    <h1 className="text-xl font-bold mb-1">تقرير الأنشطة الطلابية</h1>
-                    <p className="text-sm text-[var(--color-text-secondary)] mb-4">تاريخ الإنشاء: {new Date().toLocaleDateString('ar-EG')}</p>
-                    <hr className="border-[var(--color-border)] mb-4" />
+                        {/* Category Filter */}
+                        <div>
+                            <label className="text-sm font-semibold text-[var(--color-text-secondary)]">الفئة</label>
+                            <div className="space-y-1 mt-1">
+                                {(['male', 'female', 'all'] as const).map(cat => (
+                                    <label key={cat} className="flex items-center gap-2 text-sm cursor-pointer">
+                                        <input type="checkbox" checked={selectedCategories.includes(cat)} onChange={() => handleCategoryChange(cat)} className="form-checkbox h-4 w-4 rounded bg-[var(--color-card-bg)] border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]" />
+                                        <span>{getCategoryText(cat)}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Club Filter */}
+                        <div>
+                            <label className="text-sm font-semibold text-[var(--color-text-secondary)]">النادي</label>
+                            <div className="space-y-1 mt-1 max-h-40 overflow-y-auto pr-1">
+                                {uniqueClubs.map(club => (
+                                     <label key={club} className="flex items-center gap-2 text-sm cursor-pointer">
+                                        <input type="checkbox" checked={selectedClubs.includes(club)} onChange={() => handleClubChange(club)} className="form-checkbox h-4 w-4 rounded bg-[var(--color-card-bg)] border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]" />
+                                        <span>{club}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        <button onClick={resetFilters} className="w-full text-sm text-center py-2 bg-[var(--color-text-secondary)]/20 rounded-md hover:bg-[var(--color-text-secondary)]/30">
+                           إعادة تعيين الفلاتر
+                        </button>
+                    </div>
                 </div>
 
-                {organizedAnnouncements.length === 0 && (
-                    <p className="text-center text-[var(--color-text-secondary)] py-8">لا توجد بيانات لإنشاء تقرير.</p>
-                )}
-                
-                {organizedAnnouncements.map(([clubName, clubAnnouncements]) => (
-                    <div key={clubName} className="mb-6">
-                        <h2 className="text-lg font-bold text-[var(--color-accent)] mb-2">{clubName} ({clubAnnouncements.length} إعلانات)</h2>
-                        <div className="overflow-x-auto">
-                             <table className="w-full text-sm report-table">
+                {/* Report Preview Section */}
+                <div className="w-full md:w-2/3 report-preview-container">
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="text-center md:text-right">
+                             <h2 className="text-2xl font-bold text-[var(--color-accent)]">معاينة التقرير</h2>
+                             <p className="text-[var(--color-text-secondary)]">تقرير مُنسّق جاهز للطباعة والمشاركة.</p>
+                        </div>
+                        <button onClick={handlePrint} className="inline-flex items-center justify-center gap-2 px-4 py-2 font-semibold rounded-md transition-all bg-[var(--color-accent)] text-white hover:brightness-90 print-hide">
+                            <PrinterIcon className="w-5 h-5" />
+                            <span>طباعة</span>
+                        </button>
+                    </div>
+
+                    <div ref={reportContentRef} className="bg-[var(--color-bg)] p-4 rounded-lg border border-[var(--color-border)] h-full md:max-h-[62vh] overflow-y-auto text-right text-[var(--color-text-primary)]">
+                        <div>
+                            <h1 className="text-xl font-bold mb-1">تقرير الأنشطة الطلابية</h1>
+                            <p className="text-sm text-[var(--color-text-secondary)] mb-2">
+                                الفترة: {startDate ? new Date(startDate).toLocaleDateString('ar-EG') : 'الكل'} إلى {endDate ? new Date(endDate).toLocaleDateString('ar-EG') : 'الكل'}
+                            </p>
+                            <p className="text-xs text-[var(--color-text-secondary)] mb-4">
+                                الإجمالي: {filteredAnnouncements.length} نشاط
+                            </p>
+                            <hr className="border-[var(--color-border)] mb-4" />
+                        </div>
+                        
+                        {filteredAnnouncements.length === 0 ? (
+                            <p className="text-center text-[var(--color-text-secondary)] py-8">لا توجد بيانات تطابق الفلاتر المحددة.</p>
+                        ) : (
+                            <table className="w-full text-sm report-table">
                                 <thead className="bg-[var(--color-card-bg)]">
                                     <tr>
                                         <th className="p-2 font-semibold">النشاط</th>
@@ -132,62 +187,27 @@ const ReportModal: React.FC<ReportModalProps> = ({ announcements, onClose }) => 
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {clubAnnouncements.map(ann => {
-                                         const eventDate = new Date(ann.date);
-                                         const formattedDate = eventDate.toLocaleDateString('ar-EG', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                                         return (
-                                            <tr key={ann.id} className="border-b border-[var(--color-border)]">
-                                                <td className="p-2">{ann.title}</td>
-                                                <td className="p-2 whitespace-nowrap">{formattedDate}</td>
-                                                <td className="p-2">{ann.location}</td>
-                                                <td className="p-2">{getCategoryText(ann.category)}</td>
-                                            </tr>
-                                         );
-                                    })}
+                                    {filteredAnnouncements.map(ann => (
+                                        <tr key={ann.id} className="border-b border-[var(--color-border)]">
+                                            <td className="p-2">{ann.title}</td>
+                                            <td className="p-2 whitespace-nowrap">{new Date(ann.date).toLocaleDateString('ar-EG', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
+                                            <td className="p-2">{ann.location}</td>
+                                            <td className="p-2">{getCategoryText(ann.category)}</td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
-                        </div>
+                        )}
                     </div>
-                ))}
+                </div>
             </div>
-
-            <div className="flex justify-between items-center mt-6 print-hide">
+             <div className="flex justify-start mt-6 print-hide">
                 <button
                     onClick={onClose}
                     className="px-6 py-2 bg-[var(--color-text-secondary)]/20 text-[var(--color-text-primary)] font-semibold rounded-md hover:bg-[var(--color-text-secondary)]/30 transition-colors"
                 >
                     إغلاق
                 </button>
-                <div className="flex gap-2">
-                     <button
-                        onClick={handleCopy}
-                        disabled={isCopied}
-                        className={`inline-flex items-center justify-center gap-2 px-4 py-2 font-semibold rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-card-bg)] w-36 ${
-                            isCopied 
-                            ? 'bg-green-600 text-white cursor-not-allowed'
-                            : 'bg-sky-600 text-white hover:bg-sky-700 focus:ring-sky-500'
-                        }`}
-                    >
-                        {isCopied ? (
-                            <>
-                                <CheckCircleIcon className="w-5 h-5" />
-                                <span>تم النسخ!</span>
-                            </>
-                        ) : (
-                            <>
-                                <ClipboardIcon className="w-5 h-5" />
-                                <span>نسخ كنص</span>
-                            </>
-                        )}
-                    </button>
-                    <button
-                        onClick={handlePrint}
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2 font-semibold rounded-md transition-all bg-[var(--color-accent)] text-white hover:brightness-90"
-                    >
-                        <PrinterIcon className="w-5 h-5" />
-                        <span>طباعة</span>
-                    </button>
-                </div>
             </div>
         </Modal>
     );

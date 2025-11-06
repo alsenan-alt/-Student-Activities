@@ -38,4 +38,5 @@ export interface ThemeConfig {
   accentColor: string;
   preset: string;
   titleFont: string;
+  announcementExpirationHours: number;
 }

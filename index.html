@@ -169,6 +169,7 @@
             border: none !important;
             box-shadow: none !important;
             background: transparent !important;
+            overflow: visible !important;
         }
         
         body.is-printing .printable-area {
@@ -178,6 +179,8 @@
           padding: 0;
           color: #000 !important;
           background: #fff !important;
+          max-height: none !important;
+          overflow-y: visible !important;
         }
 
         /* --- General Element Resets for High Contrast Printing --- */
@@ -197,58 +200,68 @@
         body.is-printing .printable-area tbody,
         body.is-printing .printable-area tr,
         body.is-printing .printable-area th,
-        body.is-printing .printable-area td {
+        body.is-printing .printable-area td,
+        body.is-printing .printable-area svg {
             background: transparent !important;
             color: #000 !important;
             box-shadow: none !important;
             border-color: #ccc !important;
             text-shadow: none !important;
+            fill: #000 !important;
         }
         
-        body.is-printing .stats-card {
+        /* --- Statistics Dashboard Print --- */
+        body.is-printing .stats-dashboard-grid {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 1rem !important;
+        }
+        body.is-printing .stats-card,
+        body.is-printing .stats-chart-container {
             border: 1px solid #ccc !important;
+            page-break-inside: avoid !important;
+        }
+        body.is-printing .stats-chart-container svg {
+            max-width: 100% !important;
+        }
+        body.is-printing .stats-details-table {
+            page-break-before: auto !important;
+        }
+        
+        /* --- Report Generator Print --- */
+        body.is-printing .report-filters-container {
+            display: none !important;
+        }
+        body.is-printing .report-preview-container {
+            width: 100% !important;
+            flex: 1 !important;
         }
 
-        body.is-printing .print-distribution-bar {
-            background-image: linear-gradient(to right, #e0e0e0, #f0f0f0) !important;
-        }
-        
         body.is-printing .report-table {
             border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed; /* Important for respecting column widths */
         }
         body.is-printing .report-table th,
         body.is-printing .report-table td {
             border: 1px solid #ccc;
             padding: 8px;
             text-align: right;
-        }
-
-        /* --- Report Table Column Sizing for Print --- */
-        body.is-printing .report-table {
-            table-layout: fixed; /* Important for respecting column widths */
-            width: 100%;
-        }
-
-        body.is-printing .report-table th:nth-child(1),
-        body.is-printing .report-table td:nth-child(1) {
-            width: 40%; /* النشاط */
             word-wrap: break-word; /* Allow long words to break */
         }
 
-        body.is-printing .report-table th:nth-child(3),
-        body.is-printing .report-table td:nth-child(3) {
+        /* --- Report Table Column Sizing for Print --- */
+        body.is-printing .report-table th:nth-child(1),
+        body.is-printing .report-table td:nth-child(1) {
+            width: 40%; /* النشاط */
+        }
+        body.is-printing .report-table th:nth-child(3) {
             width: 24%;  /* المكان */
-            word-wrap: break-word;
         }
-
         body.is-printing .report-table th:nth-child(2), /* التاريخ */
-        body.is-printing .report-table td:nth-child(2),
-        body.is-printing .report-table th:nth-child(4), /* الفئة */
-        body.is-printing .report-table td:nth-child(4) {
+        body.is-printing .report-table th:nth-child(4) /* الفئة */ {
             width: 18%; /* Distribute remaining space */
-            word-wrap: break-word;
         }
-
       }
     </style>
   <script type="importmap">

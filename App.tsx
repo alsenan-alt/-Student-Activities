@@ -162,12 +162,12 @@ const DEFAULT_DATA = {
         accentColor: '#14b8a6',
         preset: 'default',
         titleFont: 'Tajawal',
+        announcementExpirationHours: 4,
     },
     adminPassword: 'admin'
 };
 
 const ITEMS_PER_PAGE = 6;
-const ANNOUNCEMENT_EXPIRATION_HOURS = 4;
 
 const App: React.FC = () => {
     // --- STATE & REFS ---
@@ -203,6 +203,13 @@ const App: React.FC = () => {
         const id = Date.now();
         setToasts(prevToasts => [...prevToasts, { id, message, type }]);
     }, []);
+
+    const ensureThemeDefaults = (loadedConfig: Partial<ThemeConfig> | null): ThemeConfig => {
+        return {
+            ...DEFAULT_DATA.themeConfig,
+            ...(loadedConfig || {}),
+        };
+    };
     
     // --- CORE APP LOGIC ---
 
@@ -230,7 +237,7 @@ const App: React.FC = () => {
                     if (serverData && serverData.links && serverData.themeConfig) {
                         setLinks(serverData.links);
                         setAnnouncements(serverData.announcements || []);
-                        setThemeConfig(serverData.themeConfig);
+                        setThemeConfig(ensureThemeDefaults(serverData.themeConfig));
                         setAdminPassword(serverData.adminPassword || 'admin');
                         localStorage.setItem('studentActivityData', JSON.stringify(serverData));
                         console.log("Data loaded successfully from Gist.");
@@ -260,7 +267,7 @@ const App: React.FC = () => {
                     if (localData && localData.links && localData.themeConfig) {
                         setLinks(localData.links);
                         setAnnouncements(localData.announcements || []);
-                        setThemeConfig(localData.themeConfig);
+                        setThemeConfig(ensureThemeDefaults(localData.themeConfig));
                         setAdminPassword(localData.adminPassword || 'admin');
                          console.log("Data loaded successfully from localStorage.");
                          success = true; // يعتبر نجاحا لأنه حمل البيانات المخزنة
@@ -367,10 +374,10 @@ const App: React.FC = () => {
                         const result = e.target?.result;
                         if (typeof result === 'string') {
                             const data = JSON.parse(result);
-                            if (data && Array.isArray(data.links) && data.themeConfig && typeof data.adminPassword === 'string') {
+                            if (data && Array.isArray(data.links) && data.themeConfig && typeof data.themeConfig === 'object' && typeof data.adminPassword === 'string') {
                                 setLinks(data.links);
                                 setAnnouncements(data.announcements || []);
-                                setThemeConfig(data.themeConfig);
+                                setThemeConfig(ensureThemeDefaults(data.themeConfig));
                                 setAdminPassword(data.adminPassword);
                                 addToast('تم استيراد الإعدادات بنجاح.');
                             } else {
@@ -529,8 +536,11 @@ const App: React.FC = () => {
     const filteredAnnouncements = announcements
         .filter(ann => ann.category === announcementCategory || ann.category === 'all')
         .filter(ann => {
+            if (themeConfig.announcementExpirationHours <= 0) {
+                return true; // Never expires if set to 0 or less
+            }
             const eventDate = new Date(ann.date);
-            const expirationTime = new Date(eventDate.getTime() + ANNOUNCEMENT_EXPIRATION_HOURS * 60 * 60 * 1000);
+            const expirationTime = new Date(eventDate.getTime() + themeConfig.announcementExpirationHours * 60 * 60 * 1000);
             return new Date() <= expirationTime;
         })
         .filter(ann => {
