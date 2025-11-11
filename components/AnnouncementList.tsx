@@ -34,7 +34,6 @@ const AnnouncementList: React.FC<AnnouncementListProps> = ({ announcements, user
           userRole={userRole}
           onDelete={onDelete}
           onEdit={onEdit}
-          // FIX: Corrected typo from onImageImageClick to onImageClick.
           onImageClick={onImageClick}
         />
       ))}

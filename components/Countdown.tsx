@@ -72,10 +72,10 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, onComplete, cardAccen
   }
 
   return (
-    <div className="flex justify-center items-center gap-1.5 text-center" dir="ltr">
+    <div className="flex justify-center items-center gap-1.5 sm:gap-2.5 text-center" dir="ltr">
         {timerComponents.map(component => (
-            <div key={component.label} className="flex flex-col items-center justify-center bg-[var(--color-bg)] p-1 rounded-md w-14">
-                 <span className="text-lg font-bold tracking-widest" style={{fontFamily: 'monospace', color: cardAccentColor || 'var(--color-accent)'}}>
+            <div key={component.label} className="flex flex-col items-center justify-center bg-black/20 p-2 rounded-md w-14 sm:w-16">
+                 <span className="text-xl sm:text-2xl font-bold tracking-widest" style={{fontFamily: 'monospace', color: cardAccentColor || 'var(--color-accent)'}}>
                     {String(component.value).padStart(2, '0')}
                  </span>
                  <span className="text-xs text-[var(--color-text-secondary)]">{component.label}</span>

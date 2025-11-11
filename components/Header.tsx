@@ -17,7 +17,7 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, titleSize, headerIcon,
                 <IconComponent className="w-12 h-12 text-[var(--color-accent)]" />
             </div>
             <h1 
-                className={`${titleSize} font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent)] to-blue-500`}
+                className={`${titleSize} font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-[var(--color-accent)]`}
                 style={{ fontFamily: `'${titleFont}', sans-serif` }}
             >
                 {title}

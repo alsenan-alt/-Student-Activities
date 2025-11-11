@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Announcement } from '../types';
+import { XIcon } from './icons/XIcon';
 
 interface AnnouncementFormProps {
   onSave: (data: Omit<Announcement, 'id'>, id: number | null) => void;
@@ -11,6 +12,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<'male' | 'female' | 'all'>('male');
   const [imageUrl, setImageUrl] = useState('');
+  const [imageDataUrl, setImageDataUrl] = useState<string | undefined>(undefined);
   const [details, setDetails] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
@@ -27,6 +29,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
       setTitle(existingAnnouncement.title);
       setCategory(existingAnnouncement.category);
       setImageUrl(existingAnnouncement.imageUrl);
+      setImageDataUrl(existingAnnouncement.imageDataUrl);
       setDetails(existingAnnouncement.details);
       
       const d = new Date(existingAnnouncement.date);
@@ -46,15 +49,54 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
     }
   }, [existingAnnouncement, isEditing]);
 
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (loadEvent) => {
+            const tempImageUrl = loadEvent.target?.result as string;
+
+            const image = new Image();
+            image.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800;
+                
+                let width = image.width;
+                let height = image.height;
+
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(image, 0, 0, width, height);
+                    const resizedImageDataUrl = canvas.toDataURL(file.type, 0.9);
+                    setImageDataUrl(resizedImageDataUrl);
+                    setImageUrl(''); // Prioritize uploaded file
+                }
+            };
+            image.src = tempImageUrl;
+        };
+        reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !imageUrl.trim() || !eventDate || !eventTime || !location.trim()) {
-      setError('الرجاء ملء جميع الحقول المطلوبة.');
+    if (!title.trim() || (!imageDataUrl && !imageUrl.trim()) || !eventDate || !eventTime || !location.trim()) {
+      setError('الرجاء ملء جميع الحقول المطلوبة (بما في ذلك صورة الإعلان).');
       return;
     }
     
-    try { new URL(imageUrl); } catch (_) {
-      setError('الرجاء إدخال رابط صورة صالح.'); return;
+    if (imageUrl.trim()) {
+      try { new URL(imageUrl); } catch (_) {
+        setError('الرجاء إدخال رابط صورة صالح.'); return;
+      }
     }
     
     if (registrationType === 'link') {
@@ -72,6 +114,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
         title,
         category,
         imageUrl,
+        imageDataUrl,
         details,
         date: new Date(`${eventDate}T${eventTime}`).toISOString(),
         location,
@@ -108,10 +151,45 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
           <input id="ann-club-name" type="text" placeholder="مثال: نادي البرمجة" value={clubName} onChange={(e) => setClubName(e.target.value)}
             className="w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)]" />
         </div>
-         <div>
-          <label htmlFor="ann-image-url" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">رابط الصورة</label>
-          <input id="ann-image-url" type="url" placeholder="https://example.com/image.png" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)}
-            className="w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)]" />
+        <div>
+            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">صورة الإعلان</label>
+            <div className="p-3 bg-[var(--color-bg)] border-2 border-dashed border-[var(--color-border)] rounded-md space-y-3">
+                {(imageDataUrl || imageUrl) && (
+                    <div className="relative group">
+                        <img 
+                            src={imageDataUrl || imageUrl} 
+                            alt="معاينة الإعلان" 
+                            className="w-full max-h-48 object-contain rounded-md bg-black/20"
+                        />
+                        <button 
+                            type="button"
+                            onClick={() => { setImageDataUrl(undefined); setImageUrl(''); }}
+                            className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="إزالة الصورة"
+                        >
+                            <XIcon className="w-4 h-4"/>
+                        </button>
+                    </div>
+                )}
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
+                    <input 
+                        id="ann-image-file"
+                        type="file"
+                        accept="image/png, image/jpeg, image/webp"
+                        onChange={handleImageFileChange}
+                        className="text-sm text-[var(--color-text-secondary)] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-accent)] file:text-white hover:file:bg-opacity-90 cursor-pointer"
+                    />
+                    <span className="text-xs text-[var(--color-text-secondary)]">أو</span>
+                    <input 
+                        id="ann-image-url" 
+                        type="url" 
+                        placeholder="أدخل رابط صورة" 
+                        value={imageUrl} 
+                        onChange={(e) => { setImageUrl(e.target.value); setImageDataUrl(undefined); }}
+                        className="flex-1 w-full sm:w-auto px-3 py-2 text-sm bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)]" 
+                    />
+                </div>
+            </div>
         </div>
         <div>
           <label htmlFor="ann-details" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">التفاصيل</label>

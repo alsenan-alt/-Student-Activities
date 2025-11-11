@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { LinkItem, UserRole, ToastMessage, ThemeConfig, Announcement } from './types';
-import Header from './components/Header';
 import LinkList from './components/LinkList';
 import AddLinkForm from './components/AddLinkForm';
 import Modal from './components/Modal';
 import { PlusIcon } from './components/icons/PlusIcon';
-import RoleSwitcher from './components/RoleSwitcher';
 import PasswordModal from './components/PasswordModal';
 import ChangePasswordModal from './components/ChangePasswordModal';
 import { KeyIcon } from './components/icons/KeyIcon';
@@ -16,31 +14,48 @@ import ThemeModal from './components/ThemeModal';
 import { ExportIcon } from './components/icons/ExportIcon';
 import { ImportIcon } from './components/icons/ImportIcon';
 import DataSourceStatus from './components/DataSourceStatus';
-import ViewSwitcher from './components/ViewSwitcher';
 import AnnouncementList from './components/AnnouncementList';
 import AnnouncementForm from './components/AnnouncementForm';
 import ImageModal from './components/ImageModal';
 import Pagination from './components/Pagination';
-import AnnouncementFilters from './components/AnnouncementFilters';
 import { RefreshIcon } from './components/icons/RefreshIcon';
 import { ChartBarIcon } from './components/icons/ChartBarIcon';
 import StatisticsModal from './components/StatisticsModal';
 import { DocumentTextIcon } from './components/icons/DocumentTextIcon';
 import ReportModal from './components/ReportModal';
 import { TableCellsIcon } from './components/icons/TableCellsIcon';
+import Header from './components/Header';
+import ToggleSwitch from './components/ToggleSwitch';
+import RoleSwitcher from './components/RoleSwitcher';
+import ViewSwitcher from './components/ViewSwitcher';
+import AnnouncementFilters from './components/AnnouncementFilters';
+import { CalendarDaysIcon } from './components/icons/CalendarDaysIcon';
+import DailyAnnouncementsModal from './components/DailyAnnouncementsModal';
+import ConfirmationModal from './components/ConfirmationModal';
 
 const DATA_SOURCE_URL = 'https://gist.githubusercontent.com/alsenan-alt/90667b2526764f93d35e6328b72d0c4b/raw/student-activity-data.json'; 
 
 export const themePresets: { [key: string]: { name: string; settings: { [key: string]: string } } } = {
-  default: {
-    name: 'الوضع المظلم',
+  dark: {
+    name: 'الوضع الداكن',
     settings: {
-      accentColor: '#14b8a6',
-      '--color-bg': '#111827',
-      '--color-card-bg': '#1f2937',
-      '--color-text-primary': '#f9fafb',
-      '--color-text-secondary': '#9ca3af',
-      '--color-border': 'rgba(255, 255, 255, 0.1)',
+      accentColor: '#2dd4bf',
+      '--color-bg': '#0f172a',
+      '--color-card-bg': '#1e293b',
+      '--color-text-primary': '#e2e8f0',
+      '--color-text-secondary': '#94a3b8',
+      '--color-border': 'rgba(148, 163, 184, 0.2)',
+    },
+  },
+  default: {
+    name: 'الافتراضي',
+    settings: {
+      accentColor: '#009688',
+      '--color-bg': '#F0F4F8',
+      '--color-card-bg': '#FFFFFF',
+      '--color-text-primary': '#004d40',
+      '--color-text-secondary': '#546E7A',
+      '--color-border': 'rgba(0, 0, 0, 0.1)',
     },
   },
   light: {
@@ -65,109 +80,66 @@ export const themePresets: { [key: string]: { name: string; settings: { [key: st
       '--color-border': 'rgba(244, 114, 182, 0.2)',
     },
   },
-  ocean: {
-    name: 'نسيم المحيط',
-    settings: {
-      accentColor: '#3b82f6',
-      '--color-bg': '#f0f9ff',
-      '--color-card-bg': '#ffffff',
-      '--color-text-primary': '#075985',
-      '--color-text-secondary': '#374151',
-      '--color-border': 'rgba(59, 130, 246, 0.2)',
-    },
-  },
-  emerald: {
-    name: 'زمرد الغابة',
-    settings: {
-      accentColor: '#10b981',
-      '--color-bg': '#0f172a',
-      '--color-card-bg': '#1e293b',
-      '--color-text-primary': '#f1f5f9',
-      '--color-text-secondary': '#94a3b8',
-      '--color-border': 'rgba(16, 185, 129, 0.2)',
-    },
-  },
-  gold: {
-    name: 'الذهب الملكي',
-    settings: {
-      accentColor: '#f59e0b',
-      '--color-bg': '#18181b',
-      '--color-card-bg': '#27272a',
-      '--color-text-primary': '#f4f4f5',
-      '--color-text-secondary': '#a1a1aa',
-      '--color-border': 'rgba(245, 158, 11, 0.2)',
-    },
-  },
 };
 
 const DEFAULT_DATA = {
     links: [
         { id: 1, title: 'نموذج تسجيل الأنشطة', url: 'https://forms.example.com/registration', icon: 'document', description: 'استخدم هذا النموذج لتسجيل اسمك في الأنشطة الطلابية المتاحة.', hidden: false },
         { id: 2, title: 'جدول الفعاليات', url: 'https://calendar.example.com/events', icon: 'calendar', description: 'اطلع على جدول ومواعيد جميع الفعاليات والأنشطة القادمة.', hidden: false },
-        { id: 3, title: 'تواصل مع المشرف', url: 'https://contact.example.com/supervisor', icon: 'chat', description: 'قناة مباشرة للتواصل مع مشرف النشاط للإجابة على استفساراتكم.', hidden: false },
     ],
     announcements: [
-        {
-            id: 1,
-            title: 'ورشة عمل البرمجة التنافسية',
+       {
+            id: 1716901842838,
+            title: "Stories of young professionals",
             category: 'male' as const,
-            imageUrl: 'https://placehold.co/600x400/14b8a6/white?text=Programming',
-            details: 'انضم إلينا لتعلم أساسيات البرمجة التنافسية وحل المشكلات المعقدة. الورشة مناسبة للمبتدئين والمتقدمين.',
-            date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-            location: 'معمل الحاسب الآلي - مبنى 5',
+            imageUrl: "https://i.imgur.com/gH5kI3w.jpeg",
+            details: "This event aims to bridge the gap between academic study and the professional world",
+            date: "2025-10-29T19:00:00.000Z",
+            location: "Building 59 - Room 1001",
             registrationType: 'link' as const,
-            registrationUrl: 'https://forms.example.com/programming-workshop',
-            clubName: 'نادي البرمجة'
+            registrationUrl: "https://example.com/register-1",
+            clubName: "Deanship of Student Affairs"
         },
         {
-            id: 2,
-            title: 'معرض الفنون والإبداع السنوي',
+            id: 1716815338102,
+            title: "Check Out The Student Activities Events page",
+            category: 'male' as const,
+            imageUrl: "https://i.imgur.com/So0hWft.jpeg",
+            details: "Explore Student Clubs Activates through a dedicated website",
+            date: "2025-11-08T12:00:00.000Z",
+            location: "Building 59 - Room 1001",
+            registrationType: 'link' as const,
+            registrationUrl: "https://example.com/register-2",
+            clubName: "Deanship of Student Affairs"
+        },
+        {
+            id: 1716815217992,
+            title: "Annual Arts & Creativity Fair",
             category: 'female' as const,
-            imageUrl: 'https://placehold.co/600x400/f472b6/white?text=Art+Fair',
-            details: 'ندعو جميع الطالبات المبدعات للمشاركة وعرض أعمالهن الفنية في المعرض السنوي. جوائز قيمة بانتظاركم.',
+            imageUrl: "https://i.imgur.com/e7qBEc3.jpeg",
+            details: "We invite all creative female students to participate and showcase their artistic works in the annual exhibition.",
             date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
-            location: 'قاعة المعارض - مبنى الأنشطة',
+            location: "Exhibition Hall - Activities Building",
             registrationType: 'link' as const,
-            registrationUrl: 'https://forms.example.com/art-fair',
-            clubName: 'نادي الفنون'
-        },
-        {
-            id: 3,
-            title: 'اليوم الرياضي المفتوح',
-            category: 'male' as const,
-            imageUrl: 'https://placehold.co/600x400/3b82f6/white?text=Sports+Day',
-            details: 'يوم مليء بالأنشطة الرياضية والمسابقات. شارك في كرة القدم، السلة، والمزيد!',
-            date: new Date(new Date().setHours(23, 59, 59, 999)).toISOString(),
-            location: 'الملاعب الرياضية',
-            registrationType: 'open' as const,
-        },
-        {
-            id: 4,
-            title: 'مسابقة الهاكاثون السنوية',
-            category: 'all' as const,
-            imageUrl: 'https://placehold.co/600x400/f59e0b/white?text=Hackathon',
-            details: 'شارك في أكبر مسابقة برمجة وتحدي لحل مشاكل واقعية. مفتوحة للطلاب والطالبات.',
-            date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
-            location: 'القاعة الكبرى',
-            registrationType: 'link' as const,
-            registrationUrl: 'https://forms.example.com/hackathon',
-            clubName: 'نادي البرمجة'
+            registrationUrl: "https://example.com/art-fair",
+            clubName: "Arts Club"
         }
     ],
     themeConfig: {
         title: "إدارة النشاط الطلابي",
-        subtitle: "مكانك المركزي لإدارة جميع روابط النشاط الطلابي",
-        titleSize: 'text-4xl md:text-5xl' as ThemeConfig['titleSize'],
+        subtitle: "بوابة الأندية الطلابية، مصدرك الشامل للإعلانات والروابط الهامة",
+        titleSize: 'text-5xl md:text-6xl' as ThemeConfig['titleSize'],
+        accentColor: '#2dd4bf',
+        preset: 'dark',
+        titleFont: 'Changa',
         headerIcon: 'link',
-        accentColor: '#14b8a6',
-        preset: 'default',
-        titleFont: 'Tajawal',
-        announcementExpirationHours: 4,
+        announcementExpiryHours: 4,
+        showExpiredAnnouncementsAdmin: false,
     },
     adminPassword: 'admin'
 };
 
-const ITEMS_PER_PAGE = 6;
+const ITEMS_PER_PAGE = 5;
 
 const App: React.FC = () => {
     // --- STATE & REFS ---
@@ -180,6 +152,7 @@ const App: React.FC = () => {
     const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
     const [isStatisticsModalOpen, setIsStatisticsModalOpen] = useState(false);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+    const [isDailyAnnouncementsModalOpen, setIsDailyAnnouncementsModalOpen] = useState(false);
     const [editingLink, setEditingLink] = useState<LinkItem | null>(null);
     const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
     const [userRole, setUserRole] = useState<UserRole>('student');
@@ -196,6 +169,8 @@ const App: React.FC = () => {
     const [viewingImage, setViewingImage] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [showTodaysAnnouncements, setShowTodaysAnnouncements] = useState(false);
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<{ type: 'link' | 'announcement', id: number } | null>(null);
 
 
     // --- CALLBACKS & HELPER FUNCTIONS ---
@@ -205,8 +180,9 @@ const App: React.FC = () => {
     }, []);
 
     const ensureThemeDefaults = (loadedConfig: Partial<ThemeConfig> | null): ThemeConfig => {
+        const defaults = { ...DEFAULT_DATA.themeConfig };
         return {
-            ...DEFAULT_DATA.themeConfig,
+            ...defaults,
             ...(loadedConfig || {}),
         };
     };
@@ -320,7 +296,7 @@ const App: React.FC = () => {
     useEffect(() => {
         if (themeConfig) {
             try {
-                const presetSettings = themePresets[themeConfig.preset]?.settings || themePresets.default.settings;
+                const presetSettings = themePresets[themeConfig.preset]?.settings || themePresets.dark.settings;
                 for (const [key, value] of Object.entries(presetSettings)) {
                     if (key !== 'accentColor') {
                         document.documentElement.style.setProperty(key, value);
@@ -398,6 +374,12 @@ const App: React.FC = () => {
     const removeToast = (id: number) => {
         setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
     };
+    
+    // FIX: Defined closeLinkForm function to resolve the error.
+    const closeLinkForm = () => {
+        setEditingLink(null);
+        setIsLinkFormOpen(false);
+    };
 
     const handleSaveLink = (id: number | null, title: string, url: string, icon: string, description: string) => {
         if (id !== null) {
@@ -414,6 +396,11 @@ const App: React.FC = () => {
         }
         closeLinkForm();
     };
+
+    const closeAnnouncementForm = () => {
+        setEditingAnnouncement(null);
+        setIsAnnouncementFormOpen(false);
+    };
     
     const handleSaveAnnouncement = (announcementData: Omit<Announcement, 'id'>, id: number | null) => {
         if (id !== null) {
@@ -429,457 +416,348 @@ const App: React.FC = () => {
         closeAnnouncementForm();
     };
 
+    const handleCloseConfirmModal = () => {
+        setIsConfirmModalOpen(false);
+        setItemToDelete(null);
+    };
+
+    const handleConfirmDelete = () => {
+        if (!itemToDelete) return;
+
+        if (itemToDelete.type === 'link') {
+            setLinks(prevLinks => prevLinks.filter(link => link.id !== itemToDelete.id));
+            addToast('تم حذف الرابط بنجاح.', 'info');
+        } else if (itemToDelete.type === 'announcement') {
+            setAnnouncements(prev => prev.filter(ann => ann.id !== itemToDelete.id));
+            addToast('تم حذف الإعلان بنجاح.', 'info');
+        }
+
+        handleCloseConfirmModal();
+    };
+
     const handleDeleteLink = (id: number) => {
-        setLinks(prevLinks => prevLinks.filter(link => link.id !== id));
-        addToast('تم حذف الرابط بنجاح!');
+        setItemToDelete({ type: 'link', id });
+        setIsConfirmModalOpen(true);
     };
 
     const handleDeleteAnnouncement = (id: number) => {
-        setAnnouncements(prev => prev.filter(ann => ann.id !== id));
-        addToast('تم حذف الإعلان.');
+        setItemToDelete({ type: 'announcement', id });
+        setIsConfirmModalOpen(true);
+    };
+
+    const handleEditLink = (link: LinkItem) => {
+        setEditingLink(link);
+        setIsLinkFormOpen(true);
+    };
+
+    const handleEditAnnouncement = (announcement: Announcement) => {
+        setEditingAnnouncement(announcement);
+        setIsAnnouncementFormOpen(true);
+    };
+
+    const openLinkForm = () => {
+        setEditingLink(null);
+        setIsLinkFormOpen(true);
+    };
+
+    const openAnnouncementForm = () => {
+        setEditingAnnouncement(null);
+        setIsAnnouncementFormOpen(true);
     };
 
     const handleReorderLinks = (reorderedLinks: LinkItem[]) => {
         setLinks(reorderedLinks);
     };
-
-    const handleToggleLinkVisibility = (id: number) => {
+    
+    const handleToggleVisibility = (id: number) => {
         setLinks(prevLinks =>
             prevLinks.map(link =>
                 link.id === id ? { ...link, hidden: !link.hidden } : link
             )
         );
-        addToast(`تم ${links.find(l => l.id === id)?.hidden ? 'إظهار' : 'إخفاء'} الرابط.`, 'info');
-    };
-    
-    const openAddForm = () => {
-        setEditingLink(null);
-        setIsLinkFormOpen(true);
     };
 
-    const openEditForm = (link: LinkItem) => {
-        setEditingLink(link);
-        setIsLinkFormOpen(true);
-    };
-    
-    const closeLinkForm = () => {
-        setIsLinkFormOpen(false);
-        setEditingLink(null);
-    };
-
-    const openAddAnnouncementForm = () => {
-        setEditingAnnouncement(null);
-        setIsAnnouncementFormOpen(true);
-    };
-
-    const openEditAnnouncementForm = (announcement: Announcement) => {
-        setEditingAnnouncement(announcement);
-        setIsAnnouncementFormOpen(true);
-    };
-    
-    const closeAnnouncementForm = () => {
-        setIsAnnouncementFormOpen(false);
-        setEditingAnnouncement(null);
-    };
-
-
-    const handleRoleChangeRequest = (role: UserRole) => {
-        if (role === 'student') {
-            setUserRole('student');
-        } else if (userRole !== 'admin') {
-            setIsPasswordModalOpen(true);
-        }
-    };
-
-    const handlePasswordVerification = (password: string): boolean => {
+    const handleVerifyPassword = (password: string) => {
         if (password === adminPassword) {
             setUserRole('admin');
             setIsPasswordModalOpen(false);
             addToast('تم تسجيل الدخول كمسؤول بنجاح.');
             return true;
         }
-        addToast('كلمة المرور غير صحيحة.', 'error');
         return false;
     };
 
-    const handleChangePassword = (current: string, newPass: string): string | null => {
-        if (current !== adminPassword) return 'كلمة المرور الحالية غير صحيحة.';
+    const handleChangePassword = (current: string, newPass: string) => {
+        if (current !== adminPassword) {
+            return 'كلمة المرور الحالية غير صحيحة.';
+        }
         setAdminPassword(newPass);
+        addToast('تم تغيير كلمة المرور بنجاح.');
         setChangePasswordModalOpen(false);
-        addToast('تم تغيير كلمة المرور بنجاح!');
         return null;
     };
 
+    const handleRoleChange = (role: UserRole) => {
+        if (role === 'admin' && userRole !== 'admin') {
+            setIsPasswordModalOpen(true);
+        } else {
+            setUserRole(role);
+        }
+    };
+    
     const handleSaveTheme = (newTheme: ThemeConfig) => {
         setThemeConfig(newTheme);
         setIsThemeModalOpen(false);
-        addToast('تم تحديث مظهر الموقع بنجاح!');
+        addToast('تم تحديث المظهر بنجاح.');
     };
     
-    // --- RENDER LOGIC ---
 
-    if (isLoading || !themeConfig) {
+    // --- FILTERED DATA ---
+    const filteredLinks = links.filter(link => {
+        if (userRole === 'student' && link.hidden) return false;
         return (
-            <div className="flex justify-center items-center h-screen">
-                <div className="loader"></div>
-            </div>
-        );
-    }
-
-    const filteredLinks = links
-        .filter(link => userRole === 'student' ? !link.hidden : true)
-        .filter(link =>
             link.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            link.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+            (link.description && link.description.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+    });
 
-    const filteredAnnouncements = announcements
-        .filter(ann => ann.category === announcementCategory || ann.category === 'all')
-        .filter(ann => {
-            if (themeConfig.announcementExpirationHours <= 0) {
-                return true; // Never expires if set to 0 or less
-            }
-            const eventDate = new Date(ann.date);
-            const expirationTime = new Date(eventDate.getTime() + themeConfig.announcementExpirationHours * 60 * 60 * 1000);
-            return new Date() <= expirationTime;
-        })
-        .filter(ann => {
-            if (!showTodaysAnnouncements) {
-                return true;
-            }
-            const eventDate = new Date(ann.date);
-            const today = new Date();
-            return (
-                eventDate.getFullYear() === today.getFullYear() &&
-                eventDate.getMonth() === today.getMonth() &&
-                eventDate.getDate() === today.getDate()
-            );
-        })
-        .filter(ann => {
-            if (!announcementSearchQuery) return true;
-            const query = announcementSearchQuery.toLowerCase();
-            return (
-                ann.title.toLowerCase().includes(query) ||
-                ann.details.toLowerCase().includes(query)
-            );
-        });
-
-    const totalPages = Math.ceil(filteredAnnouncements.length / ITEMS_PER_PAGE);
-    const paginatedAnnouncements = filteredAnnouncements.slice(
-        (currentPage - 1) * ITEMS_PER_PAGE,
-        currentPage * ITEMS_PER_PAGE
-    );
-
-    const handleExportCSV = () => {
-        if (filteredAnnouncements.length === 0) {
-            addToast('لا توجد إعلانات لتصديرها.', 'info');
-            return;
-        }
-
-        const headers = [
-            'العنوان', 'الفئة', 'اسم النادي', 'التاريخ', 'الوقت', 
-            'المكان', 'التفاصيل', 'نوع التسجيل', 'رابط التسجيل'
-        ];
-        
-        const getCategoryText = (category: 'male' | 'female' | 'all') => {
-            switch (category) {
-                case 'male': return 'طلاب';
-                case 'female': return 'طالبات';
-                case 'all': return 'الجميع';
-                default: return 'غير محدد';
-            }
-        };
-
-        const escapeCSV = (field: string | undefined) => {
-            if (field === null || field === undefined) return '';
-            const str = String(field);
-            // If the field contains a comma, double quote, or newline, wrap it in double quotes.
-            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-                // Within a double-quoted field, any double quote must be escaped by another double quote.
-                return `"${str.replace(/"/g, '""')}"`;
-            }
-            return str;
-        };
-
-        const rows = filteredAnnouncements.map(ann => {
-            const eventDate = new Date(ann.date);
-            const formattedDate = eventDate.toLocaleDateString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit' });
-            const formattedTime = eventDate.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true });
-
-            return [
-                escapeCSV(ann.title),
-                escapeCSV(getCategoryText(ann.category)),
-                escapeCSV(ann.clubName),
-                escapeCSV(formattedDate),
-                escapeCSV(formattedTime),
-                escapeCSV(ann.location),
-                escapeCSV(ann.details),
-                escapeCSV(ann.registrationType === 'link' ? 'رابط' : 'مفتوح'),
-                escapeCSV(ann.registrationUrl)
-            ].join(',');
-        });
-
-        const csvContent = [headers.join(','), ...rows].join('\n');
-        
-        // Add BOM for Excel to recognize UTF-8
-        const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
-        const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const today = new Date().toISOString().slice(0, 10);
-        link.href = url;
-        link.download = `announcements_report_${today}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        addToast('تم تصدير الإعلانات بنجاح.');
+    const isToday = (someDate: Date) => {
+        const today = new Date();
+        return someDate.getDate() === today.getDate() &&
+               someDate.getMonth() === today.getMonth() &&
+               someDate.getFullYear() === today.getFullYear();
     };
 
+    const filteredAnnouncements = announcements
+        .filter(ann => {
+            if (themeConfig && themeConfig.announcementExpiryHours > 0) {
+                const eventTime = new Date(ann.date).getTime();
+                const expiryTime = eventTime + (themeConfig.announcementExpiryHours * 60 * 60 * 1000);
+                const now = new Date().getTime();
+                
+                if (now >= expiryTime) { // It's expired
+                    // Only show if I'm an admin and the toggle is on
+                    return userRole === 'admin' && themeConfig.showExpiredAnnouncementsAdmin;
+                }
+            }
+            // Not expired, or expiry is disabled. Show it.
+            return true;
+        })
+        .filter(ann => ann.category === announcementCategory || ann.category === 'all')
+        .filter(ann => {
+             return (
+                ann.title.toLowerCase().includes(announcementSearchQuery.toLowerCase()) ||
+                (ann.clubName && ann.clubName.toLowerCase().includes(announcementSearchQuery.toLowerCase())) ||
+                ann.location.toLowerCase().includes(announcementSearchQuery.toLowerCase())
+            );
+        })
+        .filter(ann => {
+            if (!showTodaysAnnouncements) return true;
+            return isToday(new Date(ann.date));
+        })
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+    const announcementsCreatedToday = announcements.filter(ann => isToday(new Date(ann.id)));
+    const totalPages = Math.ceil(filteredAnnouncements.length / ITEMS_PER_PAGE);
+    const paginatedAnnouncements = filteredAnnouncements.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+    // --- RENDER LOGIC ---
+    if (isLoading) {
+        return <div className="flex justify-center items-center h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)]">جاري تحميل البيانات...</div>;
+    }
+    
+    if (!themeConfig) {
+         return <div className="flex justify-center items-center h-screen bg-gray-900 text-white">خطأ في تحميل إعدادات المظهر.</div>;
+    }
+
     return (
-        <div className="min-h-screen p-4 sm:p-6 md:p-8">
-            <div className="print-hide">
-                <ToastContainer toasts={toasts} onDismiss={removeToast} />
-            </div>
-            <div className="container mx-auto max-w-5xl">
-                <Header 
-                    title={themeConfig.title} 
-                    subtitle={themeConfig.subtitle} 
-                    titleSize={themeConfig.titleSize} 
-                    headerIcon={themeConfig.headerIcon}
-                    titleFont={themeConfig.titleFont} 
-                />
-                <div className="print-hide">
-                    <RoleSwitcher currentRole={userRole} onRoleChange={handleRoleChangeRequest} />
-                </div>
-                <main>
-                    <div className="flex justify-center items-center gap-4 mb-6 print-hide">
-                        <ViewSwitcher activeView={activeView} onSwitch={setActiveView} />
-                        <button
-                            onClick={() => loadInitialData(true)}
-                            disabled={isRefreshing}
-                            className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-[var(--color-text-secondary)] bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-full hover:text-[var(--color-text-primary)] hover:border-[var(--color-text-secondary)] transition-colors disabled:opacity-50 disabled:cursor-wait"
-                            aria-label="تحديث البيانات"
-                        >
-                            <RefreshIcon className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                            <span className="hidden sm:inline">{isRefreshing ? 'جاري التحديث...' : 'تحديث'}</span>
-                        </button>
-                    </div>
-
-                    {activeView === 'links' && (
-                        <>
-                            <div className="mb-8 print-hide">
-                                <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="ابحث عن رابط..." />
-                            </div>
-
-                            {userRole === 'admin' && (
-                                <div className="mb-8 flex flex-col items-center gap-6 print-hide">
-                                    <button
-                                        onClick={openAddForm}
-                                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-accent)] text-white font-semibold rounded-md hover:brightness-90 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-accent)] shadow-lg hover:shadow-[var(--color-accent)]/30 transform hover:-translate-y-0.5"
-                                    >
-                                        <PlusIcon className="w-5 h-5" />
-                                        <span>إضافة رابط جديد</span>
-                                    </button>
-                                </div>
-                            )}
-
-                            <div className="border-t border-[var(--color-border)] pt-8">
-                                <LinkList 
-                                    links={filteredLinks} 
-                                    onDelete={handleDeleteLink} 
-                                    onEdit={openEditForm}
-                                    onReorder={handleReorderLinks}
-                                    onToggleVisibility={handleToggleLinkVisibility}
-                                    userRole={userRole}
-                                    searchQuery={searchQuery} 
-                                />
-                            </div>
-                        </>
-                    )}
-                    
-                    {activeView === 'announcements' && (
-                        <div>
-                            <div className="print-hide">
-                                <AnnouncementFilters
-                                    category={announcementCategory}
-                                    onCategoryChange={setAnnouncementCategory}
-                                    searchQuery={announcementSearchQuery}
-                                    onSearchChange={setAnnouncementSearchQuery}
-                                    showTodays={showTodaysAnnouncements}
-                                    onShowTodaysChange={setShowTodaysAnnouncements}
-                                />
-                            </div>
-                            
-                            {userRole === 'admin' && (
-                                <div className="mb-8 flex justify-center print-hide">
-                                     <button
-                                        onClick={openAddAnnouncementForm}
-                                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-accent)] text-white font-semibold rounded-md hover:brightness-90 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-accent)] shadow-lg hover:shadow-[var(--color-accent)]/30 transform hover:-translate-y-0.5"
-                                    >
-                                        <PlusIcon className="w-5 h-5" />
-                                        <span>إضافة إعلان جديد</span>
-                                    </button>
-                                </div>
-                            )}
-
-                             <AnnouncementList 
-                                announcements={paginatedAnnouncements}
-                                userRole={userRole}
-                                onDelete={handleDeleteAnnouncement}
-                                onEdit={openEditAnnouncementForm}
-                                onImageClick={setViewingImage}
-                                searchQuery={announcementSearchQuery}
-                             />
-                             {totalPages > 1 && (
-                                <div className="mt-8 print-hide">
-                                    <Pagination 
-                                        currentPage={currentPage}
-                                        totalPages={totalPages}
-                                        onPageChange={setCurrentPage}
-                                    />
-                                </div>
-                             )}
-                        </div>
-                    )}
-
-
-                    {userRole === 'admin' && (
-                        <div className="mt-16 pt-8 border-t border-[var(--color-border)] flex flex-col items-center gap-6 print-hide">
-                             <DataSourceStatus url={DATA_SOURCE_URL} isLoading={isRefreshing || isLoading} error={fetchError} />
-                            <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-4">
-                                <button
-                                    onClick={() => setChangePasswordModalOpen(true)}
-                                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-card-bg)] text-[var(--color-text-primary)] font-semibold rounded-md hover:brightness-125 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-text-secondary)] shadow-lg transform hover:-translate-y-0.5"
-                                >
-                                    <KeyIcon className="w-5 h-5" />
-                                    <span>تغيير كلمة المرور</span>
-                                </button>
-                                <button
-                                    onClick={() => setIsThemeModalOpen(true)}
-                                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-card-bg)] text-[var(--color-text-primary)] font-semibold rounded-md hover:brightness-125 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-text-secondary)] shadow-lg transform hover:-translate-y-0.5"
-                                >
-                                    <ThemeIcon className="w-5 h-5" />
-                                    <span>تخصيص المظهر</span>
-                                </button>
-                                <button
-                                    onClick={() => setIsStatisticsModalOpen(true)}
-                                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-card-bg)] text-[var(--color-text-primary)] font-semibold rounded-md hover:brightness-125 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-text-secondary)] shadow-lg transform hover:-translate-y-0.5"
-                                >
-                                    <ChartBarIcon className="w-5 h-5" />
-                                    <span>عرض الإحصائيات</span>
-                                </button>
-                                <button
-                                    onClick={() => setIsReportModalOpen(true)}
-                                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-card-bg)] text-[var(--color-text-primary)] font-semibold rounded-md hover:brightness-125 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-text-secondary)] shadow-lg transform hover:-translate-y-0.5"
-                                >
-                                    <DocumentTextIcon className="w-5 h-5" />
-                                    <span>إنشاء تقرير</span>
-                                </button>
-                                 <button
-                                    onClick={handleExportCSV}
-                                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-card-bg)] text-[var(--color-text-primary)] font-semibold rounded-md hover:brightness-125 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)] focus:ring-[var(--color-text-secondary)] shadow-lg transform hover:-translate-y-0.5"
-                                >
-                                    <TableCellsIcon className="w-5 h-5" />
-                                    <span>تصدير كـ CSV</span>
-                                </button>
-                            </div>
-
-                            <div className="w-full max-w-xl p-4 rounded-lg bg-[var(--color-card-bg)] border border-[var(--color-border)] text-center">
-                                <h3 className="font-bold text-lg mb-2 text-[var(--color-text-primary)]">تحديث المحتوى للطلاب (نشر)</h3>
-                                <div className="flex gap-4 mb-4">
-                                    <button onClick={handleImport} className="w-full inline-flex items-center justify-center gap-3 px-4 py-2 bg-sky-600 text-white font-semibold rounded-md hover:bg-sky-700 transition-colors">
-                                        <ImportIcon className="w-5 h-5" />
-                                        <span>استيراد (استعادة)</span>
-                                    </button>
-                                     <button onClick={handleExport} className="w-full inline-flex items-center justify-center gap-3 px-4 py-2 bg-emerald-600 text-white font-semibold rounded-md hover:bg-emerald-700 transition-colors">
-                                        <ExportIcon className="w-5 h-5" />
-                                        <span>تصدير (للتحديث)</span>
-                                    </button>
-                                </div>
-                                <div className="text-xs text-right text-[var(--color-text-secondary)] bg-[var(--color-bg)] p-3 rounded-md">
-                                    <h4 className="font-bold text-sm text-[var(--color-text-primary)] mb-1">خطوات النشر للطلاب:</h4>
-                                    <ol className="list-decimal list-inside space-y-1 pr-4">
-                                        <li>اضغط <strong>"تصدير"</strong> لتنزيل ملف <code className="text-xs bg-[var(--color-border)] px-1 rounded">.json</code>.</li>
-                                        <li>اذهب إلى Gist الخاص بك على GitHub.</li>
-                                        <li>اضغط <strong>"Edit"</strong>، احذف المحتوى القديم، ثم الصق المحتوى الجديد.</li>
-                                        <li className="font-bold text-amber-400">اضغط <strong>"Update public gist"</strong> لحفظ التغييرات.</li>
-                                    </ol>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </main>
-                <footer className="text-center text-[var(--color-text-secondary)] mt-12 py-4 print-hide">
-                    <p>&copy; {new Date().getFullYear()} {themeConfig.title}. كل الحقوق محفوظة.</p>
-                </footer>
-            </div>
-
-            {isLinkFormOpen && (
-                <Modal onClose={closeLinkForm}>
-                    <AddLinkForm 
-                        onSave={handleSaveLink} 
-                        onClose={closeLinkForm}
-                        existingLink={editingLink}
-                    />
-                </Modal>
-            )}
-
-             {isAnnouncementFormOpen && (
-                <Modal onClose={closeAnnouncementForm}>
-                    <AnnouncementForm
-                        onSave={handleSaveAnnouncement}
-                        onClose={closeAnnouncementForm}
-                        existingAnnouncement={editingAnnouncement}
-                    />
-                </Modal>
-            )}
-
-            {isPasswordModalOpen && (
-                <PasswordModal 
-                    onClose={() => setIsPasswordModalOpen(false)} 
-                    onVerify={handlePasswordVerification} 
-                />
-            )}
-
-            {isChangePasswordModalOpen && (
-                <ChangePasswordModal
-                    onClose={() => setChangePasswordModalOpen(false)}
-                    onChangePassword={handleChangePassword}
-                />
-            )}
-
-            {isThemeModalOpen && (
-                <ThemeModal 
-                    onClose={() => setIsThemeModalOpen(false)}
-                    onSave={handleSaveTheme}
-                    currentTheme={themeConfig}
-                />
-            )}
-
+        <div className="bg-[var(--color-bg)] text-[var(--color-text-primary)] min-h-screen font-sans transition-colors duration-300">
+            <ToastContainer toasts={toasts} onDismiss={removeToast} />
+            
             {viewingImage && (
-                <ImageModal
-                    imageUrl={viewingImage}
-                    altText="صورة الإعلان"
+                <ImageModal 
+                    imageUrl={viewingImage} 
+                    altText="عرض مكبر للإعلان"
                     onClose={() => setViewingImage(null)}
                 />
             )}
 
-            {isStatisticsModalOpen && (
-                <StatisticsModal
-                    announcements={announcements}
-                    onClose={() => setIsStatisticsModalOpen(false)}
+            <main className="container mx-auto max-w-4xl px-4 py-8">
+                <Header 
+                    title={themeConfig.title}
+                    subtitle={themeConfig.subtitle}
+                    titleSize={themeConfig.titleSize}
+                    headerIcon={themeConfig.headerIcon}
+                    titleFont={themeConfig.titleFont}
                 />
-            )}
+                <RoleSwitcher currentRole={userRole} onRoleChange={handleRoleChange} />
+                
+                {userRole === 'admin' && (
+                    <div className="flex flex-col items-center justify-center gap-4 mb-8 print-hide">
+                         <DataSourceStatus url={DATA_SOURCE_URL} isLoading={isRefreshing} error={fetchError} />
+                         <div className="flex flex-wrap items-center justify-center gap-2">
+                             <button
+                                onClick={() => loadInitialData(true)}
+                                disabled={isRefreshing}
+                                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-colors bg-[var(--color-card-bg)] border border-[var(--color-border)] hover:bg-[var(--color-border)] hover:text-[var(--color-accent)]"
+                            >
+                                <RefreshIcon className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                <span>{isRefreshing ? 'جاري التحديث...' : 'تحديث البيانات'}</span>
+                            </button>
+                            <button onClick={handleImport} className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-colors bg-[var(--color-card-bg)] border border-[var(--color-border)] hover:bg-[var(--color-border)] hover:text-[var(--color-accent)]">
+                                <ImportIcon className="w-5 h-5" />
+                                <span>استيراد</span>
+                            </button>
+                            <button onClick={handleExport} className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-colors bg-[var(--color-card-bg)] border border-[var(--color-border)] hover:bg-[var(--color-border)] hover:text-[var(--color-accent)]">
+                                <ExportIcon className="w-5 h-5" />
+                                <span>تصدير</span>
+                            </button>
+                             <button onClick={() => setChangePasswordModalOpen(true)} className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-colors bg-[var(--color-card-bg)] border border-[var(--color-border)] hover:bg-[var(--color-border)] hover:text-[var(--color-accent)]">
+                                <KeyIcon className="w-5 h-5" />
+                                <span>تغيير كلمة المرور</span>
+                            </button>
+                            <button onClick={() => setIsThemeModalOpen(true)} className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-colors bg-[var(--color-card-bg)] border border-[var(--color-border)] hover:bg-[var(--color-border)] hover:text-[var(--color-accent)]">
+                                <ThemeIcon className="w-5 h-5" />
+                                <span>تخصيص المظهر</span>
+                            </button>
+                            <button onClick={() => setIsStatisticsModalOpen(true)} className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-colors bg-[var(--color-card-bg)] border border-[var(--color-border)] hover:bg-[var(--color-border)] hover:text-[var(--color-accent)]">
+                                <ChartBarIcon className="w-5 h-5" />
+                                <span>إحصائيات</span>
+                            </button>
+                             <button onClick={() => setIsReportModalOpen(true)} className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-colors bg-[var(--color-card-bg)] border border-[var(--color-border)] hover:bg-[var(--color-border)] hover:text-[var(--color-accent)]">
+                                <DocumentTextIcon className="w-5 h-5" />
+                                <span>تقرير الأنشطة</span>
+                            </button>
+                         </div>
+                    </div>
+                )}
+                
+                <div className="flex items-center justify-center my-8">
+                    <ViewSwitcher activeView={activeView} onSwitch={setActiveView} />
+                </div>
+                
+                {activeView === 'announcements' && (
+                    <div className="space-y-6">
+                        {userRole === 'admin' && (
+                            <div className="text-center mb-6 print-hide">
+                                <button
+                                    onClick={() => setIsDailyAnnouncementsModalOpen(true)}
+                                    className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-card-bg)] text-[var(--color-text-primary)] font-bold rounded-full hover:bg-[var(--color-accent)] hover:text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-lg border border-[var(--color-border)]"
+                                >
+                                    <CalendarDaysIcon className="w-6 h-6" />
+                                    <span>إعلانات اليوم</span>
+                                </button>
+                            </div>
+                        )}
+                        <AnnouncementFilters 
+                            category={announcementCategory}
+                            onCategoryChange={setAnnouncementCategory}
+                            searchQuery={announcementSearchQuery}
+                            onSearchChange={setAnnouncementSearchQuery}
+                            showTodays={showTodaysAnnouncements}
+                            onShowTodaysChange={setShowTodaysAnnouncements}
+                        />
+                        {userRole === 'admin' && (
+                            <div className="text-center print-hide">
+                                <button
+                                    onClick={openAnnouncementForm}
+                                    className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-accent)] text-white font-bold rounded-full hover:brightness-110 transition-transform hover:scale-105 shadow-lg"
+                                >
+                                    <PlusIcon className="w-6 h-6" />
+                                    <span>إضافة إعلان جديد</span>
+                                </button>
+                            </div>
+                        )}
+                        <AnnouncementList
+                            announcements={paginatedAnnouncements}
+                            userRole={userRole}
+                            onDelete={handleDeleteAnnouncement}
+                            onEdit={handleEditAnnouncement}
+                            onImageClick={(url) => setViewingImage(url)}
+                            searchQuery={announcementSearchQuery}
+                        />
+                        {totalPages > 1 && (
+                            <div className="mt-8">
+                                <Pagination 
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={setCurrentPage}
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
 
-            {isReportModalOpen && (
-                <ReportModal
-                    announcements={announcements}
-                    onClose={() => setIsReportModalOpen(false)}
-                />
-            )}
+                {activeView === 'links' && (
+                    <div className="space-y-6">
+                        <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="ابحث عن رابط..." />
+                        {userRole === 'admin' && (
+                            <div className="text-center print-hide">
+                                <button
+                                    onClick={openLinkForm}
+                                    className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-accent)] text-white font-bold rounded-full hover:brightness-110 transition-transform hover:scale-105 shadow-lg"
+                                >
+                                    <PlusIcon className="w-6 h-6" />
+                                    <span>إضافة رابط جديد</span>
+                                </button>
+                            </div>
+                        )}
+                        <LinkList
+                            links={filteredLinks}
+                            onDelete={handleDeleteLink}
+                            onEdit={handleEditLink}
+                            onReorder={handleReorderLinks}
+                            onToggleVisibility={handleToggleVisibility}
+                            userRole={userRole}
+                            searchQuery={searchQuery}
+                        />
+                    </div>
+                )}
+
+                {/* --- Modals --- */}
+                {isLinkFormOpen && (
+                    <Modal onClose={closeLinkForm} size="2xl">
+                        <AddLinkForm onSave={handleSaveLink} onClose={closeLinkForm} existingLink={editingLink} />
+                    </Modal>
+                )}
+                {isAnnouncementFormOpen && (
+                    <Modal onClose={closeAnnouncementForm} size="4xl">
+                        <AnnouncementForm onSave={handleSaveAnnouncement} onClose={closeAnnouncementForm} existingAnnouncement={editingAnnouncement} />
+                    </Modal>
+                )}
+                {isPasswordModalOpen && (
+                    <PasswordModal onClose={() => setIsPasswordModalOpen(false)} onVerify={handleVerifyPassword} />
+                )}
+                {isChangePasswordModalOpen && (
+                    <ChangePasswordModal onClose={() => setChangePasswordModalOpen(false)} onChangePassword={handleChangePassword} />
+                )}
+                {isThemeModalOpen && themeConfig && (
+                    <ThemeModal onClose={() => setIsThemeModalOpen(false)} onSave={handleSaveTheme} currentTheme={themeConfig} />
+                )}
+                {isStatisticsModalOpen && (
+                    <StatisticsModal announcements={announcements} onClose={() => setIsStatisticsModalOpen(false)} />
+                )}
+                {isReportModalOpen && (
+                    <ReportModal announcements={announcements} onClose={() => setIsReportModalOpen(false)} />
+                )}
+                {isDailyAnnouncementsModalOpen && (
+                    <DailyAnnouncementsModal 
+                        announcements={announcementsCreatedToday} 
+                        onClose={() => setIsDailyAnnouncementsModalOpen(false)} 
+                    />
+                )}
+                {isConfirmModalOpen && itemToDelete && (
+                    <ConfirmationModal
+                        onClose={handleCloseConfirmModal}
+                        onConfirm={handleConfirmDelete}
+                        title="تأكيد الحذف"
+                        message={`هل أنت متأكد أنك تريد حذف هذا ${itemToDelete.type === 'link' ? 'الرابط' : 'الإعلان'}؟ لا يمكن التراجع عن هذا الإجراء.`}
+                    />
+                )}
+            </main>
         </div>
     );
 };
 
+// FIX: Added default export to fix module loading error in index.tsx
 export default App;

@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import type { ThemeConfig } from '../types';
 import Modal from './Modal';
 import { ThemeIcon } from './icons/ThemeIcon';
-import { availableIcons } from './icons/iconMap';
 import { themePresets } from '../App';
+import ToggleSwitch from './ToggleSwitch';
 
 interface ThemeModalProps {
   onClose: () => void;
@@ -36,8 +36,8 @@ const ThemeModal: React.FC<ThemeModalProps> = ({ onClose, onSave, currentTheme }
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        if (name === 'announcementExpirationHours') {
+        const { name, value, type } = e.target;
+        if (type === 'number') {
             const numValue = parseInt(value, 10);
             setTheme(prev => ({ ...prev, [name]: isNaN(numValue) ? 0 : numValue }));
         } else {
@@ -124,22 +124,6 @@ const ThemeModal: React.FC<ThemeModalProps> = ({ onClose, onSave, currentTheme }
                         </div>
 
                         <div>
-                            <label htmlFor="announcementExpirationHours" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1 text-right">مدة صلاحية الإعلان (بالساعات)</label>
-                            <p className="text-xs text-right text-[var(--color-text-secondary)] mb-2">
-                                بعد مرور هذا الوقت على تاريخ الفعالية، سيتم إخفاء الإعلان. أدخل 0 لعدم إخفاء الإعلانات تلقائياً.
-                            </p>
-                            <input
-                                id="announcementExpirationHours"
-                                name="announcementExpirationHours"
-                                type="number"
-                                min="0"
-                                value={theme.announcementExpirationHours}
-                                onChange={handleInputChange}
-                                className="w-full px-4 py-3 bg-[var(--color-bg)] border-2 border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)] transition-colors text-[var(--color-text-primary)]"
-                            />
-                        </div>
-
-                        <div>
                             <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2 text-right">خط العنوان</label>
                             <div className="flex justify-center gap-2 p-1 bg-[var(--color-bg)] rounded-md">
                                 {titleFontOptions.map(option => (
@@ -169,31 +153,6 @@ const ThemeModal: React.FC<ThemeModalProps> = ({ onClose, onSave, currentTheme }
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2 text-right">أيقونة الرأسية</label>
-                            <div className="flex flex-wrap justify-center gap-3">
-                                {availableIcons.map((icon) => {
-                                const IconComponent = icon.component;
-                                const isSelected = theme.headerIcon === icon.id;
-                                return (
-                                    <button
-                                        key={icon.id}
-                                        type="button"
-                                        onClick={() => setTheme(prev => ({...prev, headerIcon: icon.id}))}
-                                        className={`p-3 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-card-bg)] ${
-                                            isSelected
-                                            ? 'bg-[var(--color-accent)]/20 border-[var(--color-accent)]'
-                                            : `bg-[var(--color-bg)] border-[var(--color-border)] hover:border-[var(--color-text-secondary)]`
-                                        }`}
-                                        aria-label={`اختر أيقونة ${icon.name}`}
-                                    >
-                                        <IconComponent className={`w-6 h-6 ${isSelected ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-secondary)]'}`} />
-                                    </button>
-                                );
-                                })}
-                            </div>
-                        </div>
-
-                        <div>
                             <label htmlFor="accentColor" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1 text-right">اللون الأساسي</label>
                             <div className="flex items-center gap-4 p-2 bg-[var(--color-bg)] border-2 border-[var(--color-border)] rounded-md">
                                 <input
@@ -210,6 +169,40 @@ const ThemeModal: React.FC<ThemeModalProps> = ({ onClose, onSave, currentTheme }
                                     onChange={handleInputChange}
                                     name="accentColor"
                                     className="w-full bg-[var(--color-card-bg)] px-3 py-1 rounded-md text-center text-[var(--color-text-primary)] border border-transparent focus:border-[var(--color-accent)] focus:outline-none"
+                                />
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label htmlFor="announcementExpiryHours" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1 text-right">
+                                مدة صلاحية الإعلان (بالساعات)
+                            </label>
+                            <input
+                                id="announcementExpiryHours"
+                                name="announcementExpiryHours"
+                                type="number"
+                                min="0"
+                                value={theme.announcementExpiryHours}
+                                onChange={handleInputChange}
+                                className="w-full px-4 py-3 bg-[var(--color-bg)] border-2 border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)] transition-colors text-[var(--color-text-primary)]"
+                            />
+                            <p className="text-xs text-[var(--color-text-secondary)] mt-2 text-right">
+                                بعد كم ساعة من وقت الحدث يختفي الإعلان تلقائياً. أدخل 0 لتعطيل الإخفاء التلقائي.
+                            </p>
+                        </div>
+
+                         <div>
+                            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2 text-right">
+                                عرض الإعلانات المنتهية (للمسؤول)
+                            </label>
+                            <div className="flex items-center justify-between p-3 bg-[var(--color-bg)] rounded-md border-2 border-[var(--color-border)]">
+                                <p className="text-xs text-[var(--color-text-secondary)] max-w-xs text-right">
+                                    تفعيل هذا الخيار سيُظهر جميع الإعلانات، حتى تلك التي انتهت صلاحيتها، في وضع المسؤول فقط.
+                                </p>
+                                <ToggleSwitch 
+                                label=""
+                                enabled={theme.showExpiredAnnouncementsAdmin}
+                                onChange={(enabled) => setTheme(prev => ({ ...prev, showExpiredAnnouncementsAdmin: enabled }))}
                                 />
                             </div>
                         </div>

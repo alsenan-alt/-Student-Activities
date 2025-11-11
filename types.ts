@@ -14,6 +14,7 @@ export interface Announcement {
   title: string;
   category: 'male' | 'female' | 'all';
   imageUrl: string;
+  imageDataUrl?: string; // For manually uploaded images
   details: string;
   date: string; // ISO String format
   location: string;
@@ -34,9 +35,10 @@ export interface ThemeConfig {
   title: string;
   subtitle: string;
   titleSize: 'text-4xl md:text-5xl' | 'text-5xl md:text-6xl' | 'text-6xl md:text-7xl';
-  headerIcon: string;
   accentColor: string;
   preset: string;
   titleFont: string;
-  announcementExpirationHours: number;
+  headerIcon: string;
+  announcementExpiryHours: number;
+  showExpiredAnnouncementsAdmin: boolean;
 }
