@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { XIcon } from './icons/XIcon';
+import { ArrowRightIcon } from './icons/ArrowRightIcon';
 
 interface ImageModalProps {
   imageUrl: string;
@@ -30,16 +30,16 @@ const ImageModal: React.FC<ImageModalProps> = ({ imageUrl, altText, onClose }) =
       <button
         onClick={onClose}
         className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors z-10 p-2 bg-black/20 rounded-full"
-        aria-label="إغلاق"
+        aria-label="رجوع"
       >
-        <XIcon className="w-8 h-8" />
+        <ArrowRightIcon className="w-8 h-8" />
       </button>
 
-      <div className="relative max-w-6xl max-h-[90vh] w-full" onClick={(e) => e.stopPropagation()}>
+      <div className="relative" onClick={(e) => e.stopPropagation()}>
         <img
           src={imageUrl}
           alt={altText}
-          className="w-full h-full object-contain shadow-2xl rounded-lg"
+          className="max-w-[95vw] max-h-[90vh] object-contain shadow-2xl rounded-lg"
         />
       </div>
     </div>
