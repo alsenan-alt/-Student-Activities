@@ -52,6 +52,8 @@ const ThemeModal: React.FC<ThemeModalProps> = ({ onClose, onSave, currentTheme }
                 ...prev,
                 preset: presetId,
                 accentColor: preset.settings.accentColor,
+                titleColor: preset.settings.titleColor,
+                subtitleColor: preset.settings.subtitleColor,
             }));
         }
     };
@@ -74,7 +76,7 @@ const ThemeModal: React.FC<ThemeModalProps> = ({ onClose, onSave, currentTheme }
                     <div className="flex-1 overflow-y-auto space-y-6 pr-4 -mr-4">
                         <div>
                             <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2 text-right">تصاميم جاهزة</label>
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 {Object.entries(themePresets).map(([id, preset]) => (
                                     <button
                                         key={id}
@@ -121,6 +123,49 @@ const ThemeModal: React.FC<ThemeModalProps> = ({ onClose, onSave, currentTheme }
                                 onChange={handleInputChange}
                                 className="w-full px-4 py-3 bg-[var(--color-bg)] border-2 border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)] transition-colors text-[var(--color-text-primary)]"
                             />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label htmlFor="titleColor" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1 text-right">لون العنوان الرئيسي</label>
+                                <div className="flex items-center gap-2 p-2 bg-[var(--color-bg)] border-2 border-[var(--color-border)] rounded-md">
+                                    <input
+                                        id="titleColor"
+                                        name="titleColor"
+                                        type="color"
+                                        value={theme.titleColor}
+                                        onChange={handleInputChange}
+                                        className="w-10 h-10 p-0 border-none bg-transparent cursor-pointer"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={theme.titleColor}
+                                        onChange={handleInputChange}
+                                        name="titleColor"
+                                        className="w-full bg-[var(--color-card-bg)] px-3 py-1 rounded-md text-center text-[var(--color-text-primary)] border border-transparent focus:border-[var(--color-accent)] focus:outline-none"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label htmlFor="subtitleColor" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1 text-right">لون العنوان الفرعي</label>
+                                <div className="flex items-center gap-2 p-2 bg-[var(--color-bg)] border-2 border-[var(--color-border)] rounded-md">
+                                    <input
+                                        id="subtitleColor"
+                                        name="subtitleColor"
+                                        type="color"
+                                        value={theme.subtitleColor}
+                                        onChange={handleInputChange}
+                                        className="w-10 h-10 p-0 border-none bg-transparent cursor-pointer"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={theme.subtitleColor}
+                                        onChange={handleInputChange}
+                                        name="subtitleColor"
+                                        className="w-full bg-[var(--color-card-bg)] px-3 py-1 rounded-md text-center text-[var(--color-text-primary)] border border-transparent focus:border-[var(--color-accent)] focus:outline-none"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
                         <div>

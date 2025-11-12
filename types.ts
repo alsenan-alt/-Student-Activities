@@ -17,6 +17,7 @@ export interface Announcement {
   imageDataUrl?: string; // For manually uploaded images
   details: string;
   date: string; // ISO String format
+  hasTime?: boolean;
   location: string;
   registrationType: 'link' | 'open';
   registrationUrl?: string;
@@ -36,6 +37,8 @@ export interface ThemeConfig {
   subtitle: string;
   titleSize: 'text-4xl md:text-5xl' | 'text-5xl md:text-6xl' | 'text-6xl md:text-7xl';
   accentColor: string;
+  titleColor: string;
+  subtitleColor: string;
   preset: string;
   titleFont: string;
   headerIcon: string;

@@ -23,9 +23,7 @@ import { ChartBarIcon } from './components/icons/ChartBarIcon';
 import StatisticsModal from './components/StatisticsModal';
 import { DocumentTextIcon } from './components/icons/DocumentTextIcon';
 import ReportModal from './components/ReportModal';
-import { TableCellsIcon } from './components/icons/TableCellsIcon';
 import Header from './components/Header';
-import ToggleSwitch from './components/ToggleSwitch';
 import RoleSwitcher from './components/RoleSwitcher';
 import ViewSwitcher from './components/ViewSwitcher';
 import AnnouncementFilters from './components/AnnouncementFilters';
@@ -40,6 +38,8 @@ export const themePresets: { [key: string]: { name: string; settings: { [key: st
     name: 'الوضع الداكن',
     settings: {
       accentColor: '#2dd4bf',
+      titleColor: '#ffffff',
+      subtitleColor: '#e2e8f0',
       '--color-bg': '#0f172a',
       '--color-card-bg': '#1e293b',
       '--color-text-primary': '#e2e8f0',
@@ -51,6 +51,8 @@ export const themePresets: { [key: string]: { name: string; settings: { [key: st
     name: 'الافتراضي',
     settings: {
       accentColor: '#009688',
+      titleColor: '#ffffff',
+      subtitleColor: '#ffffff',
       '--color-bg': '#F0F4F8',
       '--color-card-bg': '#FFFFFF',
       '--color-text-primary': '#004d40',
@@ -62,6 +64,8 @@ export const themePresets: { [key: string]: { name: string; settings: { [key: st
     name: 'الوضع المضيء',
     settings: {
       accentColor: '#0ea5e9',
+      titleColor: '#ffffff',
+      subtitleColor: '#ffffff',
       '--color-bg': '#f3f4f6',
       '--color-card-bg': '#ffffff',
       '--color-text-primary': '#1f2937',
@@ -73,11 +77,52 @@ export const themePresets: { [key: string]: { name: string; settings: { [key: st
     name: 'الموجة الليلية',
     settings: {
       accentColor: '#f472b6',
+      titleColor: '#ffffff',
+      subtitleColor: '#e2e8f0',
       '--color-bg': '#2d3748',
       '--color-card-bg': '#1a202c',
       '--color-text-primary': '#e2e8f0',
       '--color-text-secondary': '#a0aec0',
       '--color-border': 'rgba(244, 114, 182, 0.2)',
+    },
+  },
+  oceanic: {
+    name: 'المحيط',
+    settings: {
+      accentColor: '#38bdf8',
+      '--color-bg': '#0c2438',
+      '--color-card-bg': '#173a54',
+      '--color-text-primary': '#e0f2fe',
+      '--color-text-secondary': '#a5c9e2',
+      '--color-border': 'rgba(165, 201, 226, 0.2)',
+      titleColor: '#ffffff',
+      subtitleColor: '#e0f2fe',
+    },
+  },
+  crimson: {
+    name: 'القرمزي',
+    settings: {
+      accentColor: '#dc2626',
+      '--color-bg': '#1c1917',
+      '--color-card-bg': '#292524',
+      '--color-text-primary': '#f1f5f9',
+      '--color-text-secondary': '#a8a29e',
+      '--color-border': 'rgba(220, 38, 38, 0.2)',
+      titleColor: '#ffffff',
+      subtitleColor: '#f1f5f9',
+    },
+  },
+    forest: {
+    name: 'الغابة',
+    settings: {
+      accentColor: '#22c55e',
+      '--color-bg': '#1a2e29',
+      '--color-card-bg': '#23423a',
+      '--color-text-primary': '#d1fae5',
+      '--color-text-secondary': '#a3d9b8',
+      '--color-border': 'rgba(34, 197, 94, 0.2)',
+      titleColor: '#ffffff',
+      subtitleColor: '#d1fae5',
     },
   },
 };
@@ -95,6 +140,7 @@ const DEFAULT_DATA = {
             imageUrl: "https://i.imgur.com/gH5kI3w.jpeg",
             details: "This event aims to bridge the gap between academic study and the professional world",
             date: "2025-10-29T19:00:00.000Z",
+            hasTime: true,
             location: "Building 59 - Room 1001",
             registrationType: 'link' as const,
             registrationUrl: "https://example.com/register-1",
@@ -107,6 +153,7 @@ const DEFAULT_DATA = {
             imageUrl: "https://i.imgur.com/So0hWft.jpeg",
             details: "Explore Student Clubs Activates through a dedicated website",
             date: "2025-11-08T12:00:00.000Z",
+            hasTime: true,
             location: "Building 59 - Room 1001",
             registrationType: 'link' as const,
             registrationUrl: "https://example.com/register-2",
@@ -119,6 +166,7 @@ const DEFAULT_DATA = {
             imageUrl: "https://i.imgur.com/e7qBEc3.jpeg",
             details: "We invite all creative female students to participate and showcase their artistic works in the annual exhibition.",
             date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+            hasTime: true,
             location: "Exhibition Hall - Activities Building",
             registrationType: 'link' as const,
             registrationUrl: "https://example.com/art-fair",
@@ -130,6 +178,8 @@ const DEFAULT_DATA = {
         subtitle: "بوابة الأندية الطلابية، مصدرك الشامل للإعلانات والروابط الهامة",
         titleSize: 'text-5xl md:text-6xl' as ThemeConfig['titleSize'],
         accentColor: '#2dd4bf',
+        titleColor: '#FFFFFF',
+        subtitleColor: '#E2E8F0',
         preset: 'dark',
         titleFont: 'Changa',
         headerIcon: 'link',
@@ -298,7 +348,7 @@ const App: React.FC = () => {
             try {
                 const presetSettings = themePresets[themeConfig.preset]?.settings || themePresets.dark.settings;
                 for (const [key, value] of Object.entries(presetSettings)) {
-                    if (key !== 'accentColor') {
+                    if (key !== 'accentColor' && key !== 'titleColor' && key !== 'subtitleColor') {
                         document.documentElement.style.setProperty(key, value);
                     }
                 }
@@ -589,6 +639,8 @@ const App: React.FC = () => {
                     titleSize={themeConfig.titleSize}
                     headerIcon={themeConfig.headerIcon}
                     titleFont={themeConfig.titleFont}
+                    titleColor={themeConfig.titleColor}
+                    subtitleColor={themeConfig.subtitleColor}
                 />
                 <RoleSwitcher currentRole={userRole} onRoleChange={handleRoleChange} />
                 

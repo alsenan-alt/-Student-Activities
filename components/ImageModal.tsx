@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { XIcon } from './icons/XIcon';
 
 interface ImageModalProps {
   imageUrl: string;
@@ -21,25 +22,26 @@ const ImageModal: React.FC<ImageModalProps> = ({ imageUrl, altText, onClose }) =
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-90 flex flex-col justify-center items-center z-50 p-4 animate-fade-in-up"
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex justify-center items-center z-50 p-4 animate-fade-in-up"
       aria-modal="true"
       role="dialog"
-      onClick={onClose} 
+      onClick={onClose}
     >
-      <div className="relative max-w-4xl max-h-[80vh] w-full" onClick={(e) => e.stopPropagation()}>
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors z-10 p-2 bg-black/20 rounded-full"
+        aria-label="إغلاق"
+      >
+        <XIcon className="w-8 h-8" />
+      </button>
+
+      <div className="relative max-w-6xl max-h-[90vh] w-full" onClick={(e) => e.stopPropagation()}>
         <img
           src={imageUrl}
           alt={altText}
-          className="w-full h-full object-contain"
+          className="w-full h-full object-contain shadow-2xl rounded-lg"
         />
       </div>
-      <button
-        onClick={onClose}
-        className="mt-6 px-6 py-2 bg-[var(--color-accent)] text-white font-semibold rounded-md hover:brightness-90 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-[var(--color-accent)]"
-        aria-label="الرجوع"
-      >
-        الرجوع
-      </button>
     </div>
   );
 };
