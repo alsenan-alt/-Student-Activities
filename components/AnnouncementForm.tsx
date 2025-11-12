@@ -39,13 +39,9 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
       
       setEventDate(`${year}-${month}-${day}`);
       
-      if (existingAnnouncement.hasTime) {
-        const hours = String(d.getHours()).padStart(2, '0');
-        const minutes = String(d.getMinutes()).padStart(2, '0');
-        setEventTime(`${hours}:${minutes}`);
-      } else {
-        setEventTime('');
-      }
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      setEventTime(`${hours}:${minutes}`);
       
       setLocation(existingAnnouncement.location);
       setRegistrationType(existingAnnouncement.registrationType || 'link');
@@ -93,7 +89,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || (!imageDataUrl && !imageUrl.trim()) || !eventDate || !location.trim()) {
+    if (!title.trim() || (!imageDataUrl && !imageUrl.trim()) || !eventDate || !eventTime || !location.trim()) {
       setError('الرجاء ملء جميع الحقول المطلوبة (بما في ذلك صورة الإعلان).');
       return;
     }
@@ -115,8 +111,6 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
     }
 
     setError('');
-    const finalTime = eventTime || '00:00';
-    const hasTime = !!eventTime;
     
     onSave({
         title,
@@ -124,8 +118,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
         imageUrl,
         imageDataUrl,
         details,
-        date: new Date(`${eventDate}T${finalTime}`).toISOString(),
-        hasTime,
+        date: new Date(`${eventDate}T${eventTime}`).toISOString(),
         location,
         registrationType,
         registrationUrl: registrationType === 'link' ? registrationUrl : undefined,
@@ -215,7 +208,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
                   className="w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)]" />
               </div>
                <div>
-                <label htmlFor="ann-time" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">الوقت (اختياري)</label>
+                <label htmlFor="ann-time" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">الوقت</label>
                 <input id="ann-time" type="time" value={eventTime} onChange={(e) => setEventTime(e.target.value)}
                   className="w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)]" />
               </div>

@@ -17,7 +17,6 @@ export interface Announcement {
   imageDataUrl?: string; // For manually uploaded images
   details: string;
   date: string; // ISO String format
-  hasTime?: boolean;
   location: string;
   registrationType: 'link' | 'open';
   registrationUrl?: string;

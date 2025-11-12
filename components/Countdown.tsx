@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 
 interface CountdownProps {
@@ -8,51 +7,53 @@ interface CountdownProps {
 }
 
 const Countdown: React.FC<CountdownProps> = ({ targetDate, onComplete, cardAccentColor }) => {
-  const calculateTimeLeft = () => {
-    const difference = +new Date(targetDate) - +new Date();
-    let timeLeft = {
-      days: 0,
-      hours: 0,
-      minutes: 0,
-      seconds: 0,
-    };
-
-    if (difference > 0) {
-      timeLeft = {
-        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-        minutes: Math.floor((difference / 1000 / 60) % 60),
-        seconds: Math.floor((difference / 1000) % 60),
+  // Memoize the function to avoid re-creating it on every render,
+  // it only changes if the targetDate prop changes.
+  const calculateTimeLeft = useMemo(() => {
+    return () => {
+      const difference = +new Date(targetDate) - +new Date();
+      let timeLeft = {
+        days: 0,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
       };
-    }
 
-    return timeLeft;
-  };
+      if (difference > 0) {
+        timeLeft = {
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((difference / 1000 / 60) % 60),
+          seconds: Math.floor((difference / 1000) % 60),
+        };
+      }
+      return timeLeft;
+    };
+  }, [targetDate]);
 
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
-  const [isExpired, setIsExpired] = useState(+new Date(targetDate) <= +new Date());
+  
+  // The isExpired logic can be derived directly from the timeLeft state.
+  const isExpired = useMemo(() => {
+    return +new Date(targetDate) <= +new Date();
+  }, [targetDate, timeLeft]); // Re-check on each tick.
 
   useEffect(() => {
     if (isExpired) {
       onComplete();
+      // Ensure time is zeroed out if it was already expired on load.
+      setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
       return;
     }
 
-    const timer = setTimeout(() => {
-      const newTimeLeft = calculateTimeLeft();
-      setTimeLeft(newTimeLeft);
-      if (
-        newTimeLeft.days === 0 &&
-        newTimeLeft.hours === 0 &&
-        newTimeLeft.minutes === 0 &&
-        newTimeLeft.seconds === 0
-      ) {
-        setIsExpired(true);
-      }
+    // Set up an interval to update the timeLeft state every second.
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
     }, 1000);
 
-    return () => clearTimeout(timer);
-  });
+    // Clean up the interval when the component unmounts or dependencies change.
+    return () => clearInterval(timer);
+  }, [isExpired, calculateTimeLeft, onComplete]);
 
   const timerComponents = useMemo(() => (
     [

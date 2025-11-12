@@ -56,10 +56,9 @@ const getCategoryText = (category: 'male' | 'female' | 'all') => {
 };
 
 const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, userRole, onDelete, onEdit, onImageClick }) => {
-    const hasTime = announcement.hasTime ?? true; // Default to true for backward compatibility
     const eventDate = new Date(announcement.date);
     const formattedDate = eventDate.toLocaleDateString('ar-EG', { day: '2-digit', month: 'long', year: 'numeric' });
-    const formattedTime = hasTime ? eventDate.toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
+    const formattedTime = eventDate.toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit', hour12: true });
 
     const styles = categoryStyles[announcement.category];
     const categoryText = getCategoryText(announcement.category);
@@ -126,16 +125,14 @@ const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, userR
                 <span className="text-right font-medium">{announcement.location}</span>
                 <LocationMarkerIcon className="w-5 h-5 flex-shrink-0" />
             </div>
-            <div className={`flex items-center justify-end gap-3 ${!hasTime ? 'col-span-2' : ''}`}>
+            <div className="flex items-center justify-end gap-3">
                 <span>{formattedDate}</span>
                 <CalendarDaysIcon className="w-5 h-5 flex-shrink-0" />
             </div>
-            {hasTime && (
-                <div className="flex items-center justify-end gap-3">
-                    <span>{formattedTime}</span>
-                    <ClockIcon className="w-5 h-5 flex-shrink-0" />
-                </div>
-            )}
+            <div className="flex items-center justify-end gap-3">
+                <span>{formattedTime}</span>
+                <ClockIcon className="w-5 h-5 flex-shrink-0" />
+            </div>
         </div>
         
         <div className="my-6 p-3 bg-[var(--color-bg)] rounded-lg">
