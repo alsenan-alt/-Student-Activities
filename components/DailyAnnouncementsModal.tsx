@@ -148,32 +148,55 @@ const DailyAnnouncementsModal: React.FC<DailyAnnouncementsModalProps> = ({ annou
     };
 
     const captureElement = async (element: HTMLElement): Promise<HTMLCanvasElement> => {
-        await waitForImagesToLoad(element);
-        await new Promise(resolve => setTimeout(resolve, 200));
-
-        const parentContainer = element.parentElement as HTMLElement;
-        const originalParentMaxHeight = parentContainer.style.maxHeight;
-        const originalElementOverflow = element.style.overflowY;
-
-        parentContainer.style.maxHeight = 'none';
-        element.style.overflowY = 'visible';
-
+        // 1. Clone the element to avoid altering the visible UI
+        const clone = element.cloneNode(true) as HTMLElement;
+    
+        // 2. Prepend a CORS proxy to all external image URLs in the clone
+        const images = Array.from(clone.querySelectorAll('img'));
+        const proxyUrl = 'https://corsproxy.io/?';
+    
+        images.forEach(img => {
+            const originalSrc = img.getAttribute('src'); // Use getAttribute to be safe
+            // Only proxy external http(s) images. Don't proxy data URIs or relative paths.
+            if (originalSrc && originalSrc.startsWith('http')) {
+                // html2canvas requires the crossOrigin attribute to be set for CORS requests
+                img.crossOrigin = 'anonymous';
+                img.src = `${proxyUrl}${encodeURIComponent(originalSrc)}`;
+            }
+        });
+    
+        // 3. Append the clone to the body but keep it off-screen
+        clone.style.position = 'absolute';
+        clone.style.top = '-9999px';
+        clone.style.left = '-9999px';
+        // Ensure the clone has defined dimensions for html2canvas
+        clone.style.width = `${element.offsetWidth}px`;
+        clone.style.height = `${element.offsetHeight}px`;
+        
+        document.body.appendChild(clone);
+    
         try {
-            const canvasPromise = html2canvas(element, {
+            // 4. Wait for all (now proxied) images in the clone to load
+            await waitForImagesToLoad(clone);
+            // Add a small delay for the browser to render the final layout of the clone
+            await new Promise(resolve => setTimeout(resolve, 300));
+    
+            // 5. Run html2canvas on the prepared clone
+            const canvasPromise = html2canvas(clone, {
                 useCORS: true,
                 scale: 2,
                 backgroundColor: '#ffffff',
             });
-
+    
             const canvas = await withTimeout(
                 canvasPromise,
                 15000,
-                'Image generation timed out. This may be due to complex content or network issues.'
+                'Image generation timed out. This may be due to network issues with the image proxy.'
             );
             return canvas as HTMLCanvasElement;
         } finally {
-            parentContainer.style.maxHeight = originalParentMaxHeight;
-            element.style.overflowY = originalElementOverflow;
+            // 6. Clean up: always remove the clone from the DOM
+            document.body.removeChild(clone);
         }
     };
 
@@ -197,7 +220,7 @@ const DailyAnnouncementsModal: React.FC<DailyAnnouncementsModalProps> = ({ annou
             document.body.removeChild(link);
         } catch (error) {
             console.error("Oops, something went wrong during image generation!", error);
-            alert(`حدث خطأ أثناء إنشاء الصورة: ${(error as Error).message}. قد تكون إحدى الصور غير متاحة، أو تم حظرها.`);
+            alert(`حدث خطأ أثناء إنشاء الصورة: ${(error as Error).message}. قد تكون إحدى الصور الخارجية غير متاحة أو تم حظرها بواسطة الشبكة.`);
         } finally {
             setIsDownloading(false);
         }
