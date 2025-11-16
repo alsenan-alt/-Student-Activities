@@ -182,6 +182,8 @@ const DEFAULT_DATA = {
         headerIcon: 'link',
         announcementExpiryHours: 4,
         showExpiredAnnouncementsAdmin: false,
+        newsletterHeaderImage: null,
+        newsletterFooterImage: null,
     },
     adminPassword: 'admin'
 };
@@ -228,10 +230,14 @@ const App: React.FC = () => {
 
     const ensureThemeDefaults = (loadedConfig: Partial<ThemeConfig> | null): ThemeConfig => {
         const defaults = { ...DEFAULT_DATA.themeConfig };
-        return {
+        const finalConfig = {
             ...defaults,
             ...(loadedConfig || {}),
         };
+        // Ensure newsletter images default to null if they are missing from loaded config
+        finalConfig.newsletterHeaderImage = finalConfig.newsletterHeaderImage || null;
+        finalConfig.newsletterFooterImage = finalConfig.newsletterFooterImage || null;
+        return finalConfig;
     };
     
     // --- CORE APP LOGIC ---
@@ -789,10 +795,14 @@ const App: React.FC = () => {
                 {isReportModalOpen && (
                     <ReportModal announcements={announcements} onClose={() => setIsReportModalOpen(false)} />
                 )}
-                {isDailyAnnouncementsModalOpen && (
+                {isDailyAnnouncementsModalOpen && themeConfig && (
                     <DailyAnnouncementsModal 
                         announcements={announcementsCreatedToday} 
-                        onClose={() => setIsDailyAnnouncementsModalOpen(false)} 
+                        onClose={() => setIsDailyAnnouncementsModalOpen(false)}
+                        headerImage={themeConfig.newsletterHeaderImage}
+                        footerImage={themeConfig.newsletterFooterImage}
+                        onHeaderImageChange={(image) => setThemeConfig(prev => prev ? { ...prev, newsletterHeaderImage: image } : null)}
+                        onFooterImageChange={(image) => setThemeConfig(prev => prev ? { ...prev, newsletterFooterImage: image } : null)}
                     />
                 )}
                 {isConfirmModalOpen && itemToDelete && (

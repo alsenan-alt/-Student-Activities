@@ -43,4 +43,6 @@ export interface ThemeConfig {
   headerIcon: string;
   announcementExpiryHours: number;
   showExpiredAnnouncementsAdmin: boolean;
+  newsletterHeaderImage: string | null;
+  newsletterFooterImage: string | null;
 }
