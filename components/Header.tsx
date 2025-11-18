@@ -28,7 +28,7 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, titleSize, headerIcon,
             <div
                 className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0"
                 style={{
-                    backgroundImage: "url('https://images.unsplash.com/photo-1562774053-61a2765c925e?q=80&w=2070&auto=format&fit=crop')",
+                    backgroundImage: "url('https://images.unsplash.com/photo-1562774053-61a2765c925e?q=80&w=1280&auto=format&fit=crop')",
                     transform: `translateY(${offsetY * 0.4}px)`,
                 }}
             />

@@ -254,7 +254,7 @@ const App: React.FC = () => {
 
         try {
             if (DATA_SOURCE_URL) {
-                const response = await fetch(`${DATA_SOURCE_URL}?cachebust=${new Date().getTime()}`);
+                const response = await fetch(DATA_SOURCE_URL);
                 if (!response.ok) {
                     if (response.status === 404) {
                         errorMessage = 'فشل الاتصال: لم يتم العثور على الملف على الرابط (خطأ 404). الرجاء التأكد من صحة الرابط.';
