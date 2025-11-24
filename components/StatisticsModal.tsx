@@ -1,3 +1,4 @@
+
 import React, { useMemo, useRef } from 'react';
 import type { Announcement } from '../types';
 import Modal from './Modal';
@@ -13,7 +14,7 @@ const getCategoryInfo = (category: 'male' | 'female' | 'all') => {
     switch (category) {
         case 'male': return { text: 'طلاب', color: '#3b82f6' };
         case 'female': return { text: 'طالبات', color: '#f472b6' };
-        case 'all': return { text: 'الجميع', color: '#a855f7' };
+        case 'all': return { text: 'طلاب وطالبات', color: '#a855f7' };
         default: return { text: 'عام', color: 'var(--color-accent)' };
     }
 };
@@ -184,7 +185,7 @@ const StatisticsModal: React.FC<StatisticsModalProps> = ({ announcements, onClos
                                         <th className="p-2 text-right font-semibold">النادي</th>
                                         <th className="p-2 font-semibold">طلاب</th>
                                         <th className="p-2 font-semibold">طالبات</th>
-                                        <th className="p-2 font-semibold">الجميع</th>
+                                        <th className="p-2 font-semibold">طلاب وطالبات</th>
                                         <th className="p-2 font-semibold">الإجمالي</th>
                                     </tr>
                                 </thead>

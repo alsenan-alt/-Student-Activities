@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import type { LinkItem, UserRole, ToastMessage, ThemeConfig, Announcement } from './types';
 import LinkList from './components/LinkList';
@@ -30,6 +31,8 @@ import AnnouncementFilters from './components/AnnouncementFilters';
 import { CalendarDaysIcon } from './components/icons/CalendarDaysIcon';
 import DailyAnnouncementsModal from './components/DailyAnnouncementsModal';
 import ConfirmationModal from './components/ConfirmationModal';
+import { DocumentPlusIcon } from './components/icons/DocumentPlusIcon';
+import BulkAnnouncementModal from './components/BulkAnnouncementModal';
 
 const DATA_SOURCE_URL = 'https://gist.githubusercontent.com/alsenan-alt/90667b2526764f93d35e6328b72d0c4b/raw/student-activity-data.json'; 
 
@@ -202,6 +205,7 @@ const App: React.FC = () => {
     const [isStatisticsModalOpen, setIsStatisticsModalOpen] = useState(false);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [isDailyAnnouncementsModalOpen, setIsDailyAnnouncementsModalOpen] = useState(false);
+    const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
     const [editingLink, setEditingLink] = useState<LinkItem | null>(null);
     const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
     const [userRole, setUserRole] = useState<UserRole>('student');
@@ -469,6 +473,16 @@ const App: React.FC = () => {
         closeAnnouncementForm();
     };
 
+    const handleBulkSaveAnnouncements = (newAnnouncements: Omit<Announcement, 'id'>[]) => {
+        const announcementsWithIds = newAnnouncements.map((ann, index) => ({
+            ...ann,
+            id: Date.now() + index, // Ensure unique IDs
+        }));
+        setAnnouncements(prev => [...announcementsWithIds, ...prev]);
+        addToast('تم إضافة الإعلانات بنجاح!');
+        setIsBulkModalOpen(false);
+    };
+
     const handleCloseConfirmModal = () => {
         setIsConfirmModalOpen(false);
         setItemToDelete(null);
@@ -713,13 +727,20 @@ const App: React.FC = () => {
                             onShowTodaysChange={setShowTodaysAnnouncements}
                         />
                         {userRole === 'admin' && (
-                            <div className="text-center print-hide">
+                            <div className="flex items-center justify-center gap-4 print-hide">
                                 <button
                                     onClick={openAnnouncementForm}
                                     className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-accent)] text-white font-bold rounded-full hover:brightness-110 transition-transform hover:scale-105 shadow-lg"
                                 >
                                     <PlusIcon className="w-6 h-6" />
                                     <span>إضافة إعلان جديد</span>
+                                </button>
+                                <button
+                                    onClick={() => setIsBulkModalOpen(true)}
+                                    className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] text-[var(--color-text-primary)] font-bold rounded-full hover:bg-[var(--color-border)] hover:text-[var(--color-accent)] transition-transform hover:scale-105 shadow-lg"
+                                    title="إضافة إعلانات متعددة"
+                                >
+                                    <DocumentPlusIcon className="w-6 h-6" />
                                 </button>
                             </div>
                         )}
@@ -780,6 +801,9 @@ const App: React.FC = () => {
                         <AnnouncementForm onSave={handleSaveAnnouncement} onClose={closeAnnouncementForm} existingAnnouncement={editingAnnouncement} />
                     </Modal>
                 )}
+                {isBulkModalOpen && (
+                    <BulkAnnouncementModal onClose={() => setIsBulkModalOpen(false)} onSave={handleBulkSaveAnnouncements} />
+                )}
                 {isPasswordModalOpen && (
                     <PasswordModal onClose={() => setIsPasswordModalOpen(false)} onVerify={handleVerifyPassword} />
                 )}
@@ -818,5 +842,4 @@ const App: React.FC = () => {
     );
 };
 
-// FIX: Added default export to fix module loading error in index.tsx
 export default App;

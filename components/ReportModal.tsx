@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState, useRef } from 'react';
 import type { Announcement } from '../types';
 import Modal from './Modal';
@@ -13,7 +14,7 @@ const getCategoryText = (category: 'male' | 'female' | 'all') => {
     switch (category) {
         case 'male': return 'طلاب';
         case 'female': return 'طالبات';
-        case 'all': return 'الجميع';
+        case 'all': return 'طلاب وطالبات';
         default: return 'غير محدد';
     }
 };

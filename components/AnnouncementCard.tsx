@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type { Announcement, UserRole } from '../types';
 import { TrashIcon } from './icons/TrashIcon';
@@ -50,7 +51,7 @@ const getCategoryText = (category: 'male' | 'female' | 'all') => {
     switch (category) {
         case 'male': return 'طلاب';
         case 'female': return 'طالبات';
-        case 'all': return 'الجميع';
+        case 'all': return 'طلاب وطالبات';
         default: return '';
     }
 };
