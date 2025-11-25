@@ -34,7 +34,8 @@ import ConfirmationModal from './components/ConfirmationModal';
 import { DocumentPlusIcon } from './components/icons/DocumentPlusIcon';
 import BulkAnnouncementModal from './components/BulkAnnouncementModal';
 
-const DATA_SOURCE_URL = 'https://gist.githubusercontent.com/alsenan-alt/90667b2526764f93d35e6328b72d0c4b/raw/student-activity-data.json'; 
+// Update to point to your new API route
+const API_ENDPOINT = '/api/student-activity-data';
 
 export const themePresets: { [key: string]: { name: string; settings: { [key: string]: string } } } = {
   dark: {
@@ -216,6 +217,7 @@ const App: React.FC = () => {
     const [announcementSearchQuery, setAnnouncementSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false); // New state for saving status
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [activeView, setActiveView] = useState<'links' | 'announcements'>('announcements');
     const [announcementCategory, setAnnouncementCategory] = useState<'male' | 'female'>('male');
@@ -238,7 +240,6 @@ const App: React.FC = () => {
             ...defaults,
             ...(loadedConfig || {}),
         };
-        // Ensure newsletter images default to null if they are missing from loaded config
         finalConfig.newsletterHeaderImage = finalConfig.newsletterHeaderImage || null;
         finalConfig.newsletterFooterImage = finalConfig.newsletterFooterImage || null;
         return finalConfig;
@@ -257,42 +258,54 @@ const App: React.FC = () => {
         let success = false;
 
         try {
-            if (DATA_SOURCE_URL) {
-                const response = await fetch(DATA_SOURCE_URL);
-                if (!response.ok) {
-                    if (response.status === 404) {
-                        errorMessage = 'فشل الاتصال: لم يتم العثور على الملف على الرابط (خطأ 404). الرجاء التأكد من صحة الرابط.';
-                    } else {
-                        errorMessage = `فشل الاتصال بالخادم (خطأ ${response.status}).`;
-                    }
-                } else {
-                    const serverData = await response.json();
-                    if (serverData && serverData.links && serverData.themeConfig) {
-                        setLinks(serverData.links);
+            const response = await fetch(API_ENDPOINT);
+            if (response.ok) {
+                const serverData = await response.json();
+                if (serverData) {
+                     // Check if data is not empty (e.g. initial load)
+                     if(serverData.links || serverData.themeConfig) {
+                        setLinks(serverData.links || []);
                         setAnnouncements(serverData.announcements || []);
                         setThemeConfig(ensureThemeDefaults(serverData.themeConfig));
                         setAdminPassword(serverData.adminPassword || 'admin');
                         localStorage.setItem('studentActivityData', JSON.stringify(serverData));
-                        console.log("Data loaded successfully from Gist.");
-                        setFetchError(null);
-                        success = true;
-                    } else {
-                       errorMessage = 'البيانات المستلمة من الرابط غير صالحة.';
-                    }
+                        console.log("Data loaded successfully from Vercel Blob.");
+                     } else {
+                        // API exists but returned null (empty file), load defaults
+                         setLinks(DEFAULT_DATA.links);
+                         setAnnouncements(DEFAULT_DATA.announcements);
+                         setThemeConfig(DEFAULT_DATA.themeConfig);
+                         setAdminPassword(DEFAULT_DATA.adminPassword);
+                         console.log("No data in Vercel Blob yet, loaded defaults.");
+                     }
+                    setFetchError(null);
+                    success = true;
                 }
             } else {
-                errorMessage = 'لم يتم تكوين رابط مصدر البيانات. يتم عرض البيانات المحلية.';
+                 // Check if it's the specific Vercel token error
+                 const text = await response.text();
+                 if(text.includes('BLOB_READ_WRITE_TOKEN is missing')) {
+                     errorMessage = 'تنبيه: يجب ربط قاعدة البيانات بالمشروع في لوحة تحكم Vercel';
+                 } else {
+                     if (response.status === 404) {
+                         console.warn("API route not found (404). Falling back to local storage/defaults.");
+                     } else {
+                         errorMessage = `Could not fetch from API (Status: ${response.status})`;
+                     }
+                 }
             }
         } catch (error) {
             console.error("Could not fetch/parse server data, falling back to local.", error);
-            errorMessage = 'حدث خطأ في الشبكة أو في تحليل البيانات. سيتم عرض آخر نسخة محفوظة.';
+            errorMessage = 'حدث خطأ في الشبكة. سيتم عرض النسخة المحلية.';
         }
 
-        if (errorMessage && !success) {
-            setFetchError(errorMessage);
-            if (!isRefresh) addToast(errorMessage, "error");
+        if (!success) {
+            if (errorMessage) {
+                // Don't show toast on 404 (common in dev), just log unless it's a real error
+                if(!errorMessage.includes("404")) setFetchError(errorMessage);
+            }
 
-            // Priority 2: Fallback to localStorage
+            // Fallback to localStorage
             try {
                 const localDataString = localStorage.getItem('studentActivityData');
                 if (localDataString) {
@@ -303,7 +316,7 @@ const App: React.FC = () => {
                         setThemeConfig(ensureThemeDefaults(localData.themeConfig));
                         setAdminPassword(localData.adminPassword || 'admin');
                          console.log("Data loaded successfully from localStorage.");
-                         success = true; // يعتبر نجاحا لأنه حمل البيانات المخزنة
+                         success = true;
                     }
                 }
             } catch (error) {
@@ -312,7 +325,6 @@ const App: React.FC = () => {
         }
         
         if(!success) {
-             // Priority 3: Fallback to hardcoded defaults
             console.log("Falling back to default data.");
             setLinks(DEFAULT_DATA.links);
             setAnnouncements(DEFAULT_DATA.announcements);
@@ -324,7 +336,7 @@ const App: React.FC = () => {
             if (success) {
                 addToast('تم تحديث البيانات بنجاح.');
             } else {
-                addToast('فشل تحديث البيانات. تحقق من اتصالك بالإنترنت.', 'error');
+                addToast('فشل تحديث البيانات. تحقق من اتصالك.', 'error');
             }
             setIsRefreshing(false);
         } else {
@@ -332,24 +344,60 @@ const App: React.FC = () => {
         }
     }, [addToast]);
 
-    // Effect for loading initial data on mount
     useEffect(() => {
         loadInitialData(false);
     }, [loadInitialData]);
 
-    // Effect for saving data to localStorage on changes (admin's draft)
-    useEffect(() => {
-        if (!isLoading && themeConfig && userRole === 'admin') {
-            try {
-                const appData = { links, announcements, themeConfig, adminPassword };
-                localStorage.setItem('studentActivityData', JSON.stringify(appData));
-            } catch (error) {
-                console.error("Failed to save to localStorage", error);
+
+    // Function to persist data to the Server (Vercel Blob)
+    const persistData = useCallback(async (
+        newLinks: LinkItem[], 
+        newAnnouncements: Announcement[], 
+        newThemeConfig: ThemeConfig, 
+        newAdminPassword: string
+    ) => {
+        const appData = { 
+            links: newLinks, 
+            announcements: newAnnouncements, 
+            themeConfig: newThemeConfig, 
+            adminPassword: newAdminPassword 
+        };
+        
+        // Always save to localStorage first as backup/optimistic update
+        try {
+            localStorage.setItem('studentActivityData', JSON.stringify(appData));
+        } catch(e) { console.error("Local save failed", e); }
+
+        // Send to Server
+        setIsSaving(true);
+        try {
+            const response = await fetch(API_ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(appData)
+            });
+            
+            if (!response.ok) {
+                 const text = await response.text();
+                 if(text.includes('BLOB_READ_WRITE_TOKEN is missing')) {
+                     throw new Error('يرجى ربط قاعدة البيانات في Vercel');
+                 }
+                throw new Error(`Server returned ${response.status}`);
             }
+            // Success
+            console.log("Data persisted to Vercel Blob successfully.");
+            setFetchError(null); // Clear previous errors on success
+        } catch (error: any) {
+            console.error("Failed to persist data to server:", error);
+            addToast("فشل حفظ البيانات في السحابة. تم الحفظ محلياً فقط.", "error");
+            setFetchError(error.message || "فشل الاتصال بالخادم.");
+        } finally {
+            setIsSaving(false);
         }
-    }, [links, announcements, themeConfig, adminPassword, isLoading, userRole]);
-    
-    // Effect for applying theme
+    }, [addToast]);
+
+
+    // Effect for applying theme locally
     useEffect(() => {
         if (themeConfig) {
             try {
@@ -366,7 +414,7 @@ const App: React.FC = () => {
         }
     }, [themeConfig]);
 
-    // Effect to reset pagination when filters change
+    // Effect to reset pagination
     useEffect(() => {
         setCurrentPage(1);
     }, [announcementCategory, activeView, showTodaysAnnouncements, announcementSearchQuery]);
@@ -407,19 +455,27 @@ const App: React.FC = () => {
                         const result = e.target?.result;
                         if (typeof result === 'string') {
                             const data = JSON.parse(result);
-                            if (data && Array.isArray(data.links) && data.themeConfig && typeof data.themeConfig === 'object' && typeof data.adminPassword === 'string') {
-                                setLinks(data.links);
-                                setAnnouncements(data.announcements || []);
-                                setThemeConfig(ensureThemeDefaults(data.themeConfig));
-                                setAdminPassword(data.adminPassword);
-                                addToast('تم استيراد الإعدادات بنجاح.');
+                            if (data && Array.isArray(data.links) && data.themeConfig) {
+                                const newLinks = data.links;
+                                const newAnns = data.announcements || [];
+                                const newTheme = ensureThemeDefaults(data.themeConfig);
+                                const newPass = data.adminPassword || adminPassword;
+
+                                setLinks(newLinks);
+                                setAnnouncements(newAnns);
+                                setThemeConfig(newTheme);
+                                setAdminPassword(newPass);
+                                
+                                // Trigger Save to Server
+                                persistData(newLinks, newAnns, newTheme, newPass);
+                                addToast('تم استيراد الإعدادات وحفظها بنجاح.');
                             } else {
                                 throw new Error('Invalid file structure.');
                             }
                         }
                     } catch (error) {
                         console.error('Failed to parse imported file', error);
-                        addToast('فشل استيراد الملف. تأكد من أن الملف صحيح.', 'error');
+                        addToast('فشل استيراد الملف.', 'error');
                     }
                 };
                 reader.readAsText(file);
@@ -432,25 +488,24 @@ const App: React.FC = () => {
         setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
     };
     
-    // FIX: Defined closeLinkForm function to resolve the error.
     const closeLinkForm = () => {
         setEditingLink(null);
         setIsLinkFormOpen(false);
     };
 
     const handleSaveLink = (id: number | null, title: string, url: string, icon: string, description: string) => {
+        if (!themeConfig) return;
+        let newLinks;
         if (id !== null) {
-            setLinks(prevLinks =>
-                prevLinks.map(link =>
-                    link.id === id ? { ...link, title, url, icon, description } : link
-                )
-            );
+            newLinks = links.map(link => link.id === id ? { ...link, title, url, icon, description } : link);
             addToast('تم تحديث الرابط بنجاح!');
         } else {
             const newLink: LinkItem = { id: Date.now(), title, url, icon, description, hidden: false };
-            setLinks(prevLinks => [...prevLinks, newLink]);
+            newLinks = [...links, newLink];
             addToast('تمت إضافة الرابط بنجاح!');
         }
+        setLinks(newLinks);
+        persistData(newLinks, announcements, themeConfig, adminPassword);
         closeLinkForm();
     };
 
@@ -460,25 +515,30 @@ const App: React.FC = () => {
     };
     
     const handleSaveAnnouncement = (announcementData: Omit<Announcement, 'id'>, id: number | null) => {
+        if (!themeConfig) return;
+        let newAnnouncements;
         if (id !== null) {
-            setAnnouncements(prev => 
-                prev.map(ann => ann.id === id ? { ...ann, ...announcementData } : ann)
-            );
+            newAnnouncements = announcements.map(ann => ann.id === id ? { ...ann, ...announcementData } : ann);
             addToast('تم تحديث الإعلان بنجاح!');
         } else {
             const newAnnouncement: Announcement = { id: Date.now(), ...announcementData };
-            setAnnouncements(prev => [newAnnouncement, ...prev]);
+            newAnnouncements = [newAnnouncement, ...announcements];
             addToast('تمت إضافة الإعلان بنجاح!');
         }
+        setAnnouncements(newAnnouncements);
+        persistData(links, newAnnouncements, themeConfig, adminPassword);
         closeAnnouncementForm();
     };
 
-    const handleBulkSaveAnnouncements = (newAnnouncements: Omit<Announcement, 'id'>[]) => {
-        const announcementsWithIds = newAnnouncements.map((ann, index) => ({
+    const handleBulkSaveAnnouncements = (newAnnsData: Omit<Announcement, 'id'>[]) => {
+        if (!themeConfig) return;
+        const announcementsWithIds = newAnnsData.map((ann, index) => ({
             ...ann,
-            id: Date.now() + index, // Ensure unique IDs
+            id: Date.now() + index,
         }));
-        setAnnouncements(prev => [...announcementsWithIds, ...prev]);
+        const newAnnouncements = [...announcementsWithIds, ...announcements];
+        setAnnouncements(newAnnouncements);
+        persistData(links, newAnnouncements, themeConfig, adminPassword);
         addToast('تم إضافة الإعلانات بنجاح!');
         setIsBulkModalOpen(false);
     };
@@ -489,13 +549,17 @@ const App: React.FC = () => {
     };
 
     const handleConfirmDelete = () => {
-        if (!itemToDelete) return;
+        if (!itemToDelete || !themeConfig) return;
 
         if (itemToDelete.type === 'link') {
-            setLinks(prevLinks => prevLinks.filter(link => link.id !== itemToDelete.id));
+            const newLinks = links.filter(link => link.id !== itemToDelete.id);
+            setLinks(newLinks);
+            persistData(newLinks, announcements, themeConfig, adminPassword);
             addToast('تم حذف الرابط بنجاح.', 'info');
         } else if (itemToDelete.type === 'announcement') {
-            setAnnouncements(prev => prev.filter(ann => ann.id !== itemToDelete.id));
+            const newAnnouncements = announcements.filter(ann => ann.id !== itemToDelete.id);
+            setAnnouncements(newAnnouncements);
+            persistData(links, newAnnouncements, themeConfig, adminPassword);
             addToast('تم حذف الإعلان بنجاح.', 'info');
         }
 
@@ -533,15 +597,16 @@ const App: React.FC = () => {
     };
 
     const handleReorderLinks = (reorderedLinks: LinkItem[]) => {
+        if (!themeConfig) return;
         setLinks(reorderedLinks);
+        persistData(reorderedLinks, announcements, themeConfig, adminPassword);
     };
     
     const handleToggleVisibility = (id: number) => {
-        setLinks(prevLinks =>
-            prevLinks.map(link =>
-                link.id === id ? { ...link, hidden: !link.hidden } : link
-            )
-        );
+        if (!themeConfig) return;
+        const newLinks = links.map(link => link.id === id ? { ...link, hidden: !link.hidden } : link);
+        setLinks(newLinks);
+        persistData(newLinks, announcements, themeConfig, adminPassword);
     };
 
     const handleVerifyPassword = (password: string) => {
@@ -558,7 +623,10 @@ const App: React.FC = () => {
         if (current !== adminPassword) {
             return 'كلمة المرور الحالية غير صحيحة.';
         }
+        if (!themeConfig) return 'خطأ في النظام';
+
         setAdminPassword(newPass);
+        persistData(links, announcements, themeConfig, newPass);
         addToast('تم تغيير كلمة المرور بنجاح.');
         setChangePasswordModalOpen(false);
         return null;
@@ -574,6 +642,7 @@ const App: React.FC = () => {
     
     const handleSaveTheme = (newTheme: ThemeConfig) => {
         setThemeConfig(newTheme);
+        persistData(links, announcements, newTheme, adminPassword);
         setIsThemeModalOpen(false);
         addToast('تم تحديث المظهر بنجاح.');
     };
@@ -601,13 +670,10 @@ const App: React.FC = () => {
                 const eventTime = new Date(ann.date).getTime();
                 const expiryTime = eventTime + (themeConfig.announcementExpiryHours * 60 * 60 * 1000);
                 const now = new Date().getTime();
-                
-                if (now >= expiryTime) { // It's expired
-                    // Only show if I'm an admin and the toggle is on
+                if (now >= expiryTime) {
                     return userRole === 'admin' && themeConfig.showExpiredAnnouncementsAdmin;
                 }
             }
-            // Not expired, or expiry is disabled. Show it.
             return true;
         })
         .filter(ann => ann.category === announcementCategory || ann.category === 'all')
@@ -663,17 +729,22 @@ const App: React.FC = () => {
                 
                 {userRole === 'admin' && (
                     <div className="flex flex-col items-center justify-center gap-4 mb-8 print-hide">
-                         <DataSourceStatus url={DATA_SOURCE_URL} isLoading={isRefreshing} error={fetchError} />
+                         <DataSourceStatus 
+                             url={API_ENDPOINT} 
+                             isLoading={isRefreshing} 
+                             isSaving={isSaving}
+                             error={fetchError} 
+                         />
                          <div className="flex flex-wrap items-center justify-center gap-2">
                              <button
                                 onClick={() => loadInitialData(true)}
-                                disabled={isRefreshing}
+                                disabled={isRefreshing || isSaving}
                                 className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-colors bg-[var(--color-card-bg)] border border-[var(--color-border)] hover:bg-[var(--color-border)] hover:text-[var(--color-accent)]"
                             >
                                 <RefreshIcon className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
                                 <span>{isRefreshing ? 'جاري التحديث...' : 'تحديث البيانات'}</span>
                             </button>
-                            <button onClick={handleImport} className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-colors bg-[var(--color-card-bg)] border border-[var(--color-border)] hover:bg-[var(--color-border)] hover:text-[var(--color-accent)]">
+                            <button onClick={handleImport} disabled={isSaving} className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-colors bg-[var(--color-card-bg)] border border-[var(--color-border)] hover:bg-[var(--color-border)] hover:text-[var(--color-accent)]">
                                 <ImportIcon className="w-5 h-5" />
                                 <span>استيراد</span>
                             </button>
