@@ -368,19 +368,38 @@ const App: React.FC = () => {
             localStorage.setItem('studentActivityData', JSON.stringify(appData));
         } catch(e) { console.error("Local save failed", e); }
 
+        // Vercel Serverless Function Limit Check (approx 4.5MB)
+        const payloadString = JSON.stringify(appData);
+        const payloadSize = new Blob([payloadString]).size;
+        const LIMIT_MB = 4.0; // Safety margin below 4.5MB
+        
+        if (payloadSize > LIMIT_MB * 1024 * 1024) {
+            setFetchError(`حجم البيانات (${(payloadSize / 1024 / 1024).toFixed(2)} MB) تجاوز الحد المسموح به للمزامنة السحابية. تم الحفظ محلياً فقط. حاول تقليل الصور.`);
+            addToast(`حجم البيانات كبير جداً. تم الحفظ محلياً فقط.`, "error");
+            return;
+        }
+
         // Send to Server
         setIsSaving(true);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
         try {
             const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(appData)
+                body: payloadString,
+                signal: controller.signal
             });
-            
+            clearTimeout(timeoutId);
+
             if (!response.ok) {
                  const text = await response.text();
                  if(text.includes('BLOB_READ_WRITE_TOKEN is missing')) {
                      throw new Error('يرجى ربط قاعدة البيانات في Vercel');
+                 }
+                 if(response.status === 413) {
+                     throw new Error('حجم البيانات كبير جداً للخادم.');
                  }
                 throw new Error(`Server returned ${response.status}`);
             }
@@ -389,8 +408,13 @@ const App: React.FC = () => {
             setFetchError(null); // Clear previous errors on success
         } catch (error: any) {
             console.error("Failed to persist data to server:", error);
-            addToast("فشل حفظ البيانات في السحابة. تم الحفظ محلياً فقط.", "error");
-            setFetchError(error.message || "فشل الاتصال بالخادم.");
+            if (error.name === 'AbortError') {
+                setFetchError("انتهت مهلة الاتصال بالخادم. البيانات كبيرة جداً أو الاتصال بطيء.");
+                addToast("انتهت مهلة الحفظ السحابي. تم الحفظ محلياً.", "error");
+            } else {
+                addToast("فشل حفظ البيانات في السحابة. تم الحفظ محلياً فقط.", "error");
+                setFetchError(error.message || "فشل الاتصال بالخادم.");
+            }
         } finally {
             setIsSaving(false);
         }
@@ -468,7 +492,7 @@ const App: React.FC = () => {
                                 
                                 // Trigger Save to Server
                                 persistData(newLinks, newAnns, newTheme, newPass);
-                                addToast('تم استيراد الإعدادات وحفظها بنجاح.');
+                                addToast('تم استيراد الإعدادات، جاري الحفظ...');
                             } else {
                                 throw new Error('Invalid file structure.');
                             }
