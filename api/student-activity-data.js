@@ -1,65 +1,53 @@
 import { put, list } from '@vercel/blob';
 
-export const config = {
-  runtime: 'edge',
-};
-
-export default async function handler(request) {
+export default async function handler(req, res) {
   const FILENAME = 'student-activity-data.json';
   const token = process.env.BLOB_READ_WRITE_TOKEN;
 
-  // Handle CORS
-  if (request.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-    });
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+
+  // Handle preflight OPTIONS request
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
   }
 
+  // Check for API token
   if (!token) {
-    return new Response('BLOB_READ_WRITE_TOKEN is missing. Please connect the Blob store to your Vercel project.', { 
-        status: 500,
-        headers: { 'Access-Control-Allow-Origin': '*' }
-    });
+    res.status(500).send('BLOB_READ_WRITE_TOKEN is missing. Please connect the Blob store to your Vercel project.');
+    return;
   }
 
   try {
-    if (request.method === 'GET') {
+    if (req.method === 'GET') {
       // 1. List blobs to find our data file
       const { blobs } = await list({ token });
       const blob = blobs.find((b) => b.pathname === FILENAME);
 
       if (!blob) {
-        // File doesn't exist yet, return null or empty structure
-        return new Response(JSON.stringify(null), {
-          status: 200,
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          },
-        });
+        // File doesn't exist yet, return null
+        res.status(200).json(null);
+        return;
       }
 
       // 2. Fetch the content of the blob
-      // cache: 'no-store' ensures we always get the latest version from the blob store URL, bypassing edge cache
-      const data = await fetch(blob.url, { cache: 'no-store' }).then((res) => res.json());
+      const response = await fetch(blob.url, { cache: 'no-store' });
+      const data = await response.json();
 
-      return new Response(JSON.stringify(data), {
-        status: 200,
-        headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-        },
-      });
+      res.status(200).json(data);
+      return;
     }
 
-    if (request.method === 'POST') {
-      // 1. Get the new data from the request body
-      const newData = await request.json();
+    if (req.method === 'POST') {
+      // 1. Get the new data from the request body (Vercel parses JSON automatically)
+      const newData = req.body;
 
       // 2. Overwrite the existing file in Blob Storage
       const { url } = await put(FILENAME, JSON.stringify(newData), {
@@ -68,20 +56,13 @@ export default async function handler(request) {
         token,
       });
 
-      return new Response(JSON.stringify({ success: true, url }), {
-        status: 200,
-        headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-        },
-      });
+      res.status(200).json({ success: true, url });
+      return;
     }
 
-    return new Response('Method not allowed', { status: 405 });
+    res.status(405).send('Method not allowed');
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
+    console.error(error);
+    res.status(500).json({ error: error.message });
   }
 }
