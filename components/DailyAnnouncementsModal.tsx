@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+
+import React, { useRef, useState, useMemo } from 'react';
 import type { Announcement } from '../types';
 import Modal from './Modal';
 import { LocationMarkerIcon } from './icons/LocationMarkerIcon';
@@ -7,6 +8,8 @@ import { CalendarDaysIcon } from './icons/CalendarDaysIcon';
 import { XIcon } from './icons/XIcon';
 import { DownloadIcon } from './icons/DownloadIcon';
 import { TrashIcon } from './icons/TrashIcon';
+import { ArrowRightIcon } from './icons/ArrowRightIcon';
+import { CheckCircleIcon } from './icons/CheckCircleIcon';
 
 // This lets TypeScript know that html2canvas will be available globally from the script tag.
 declare const html2canvas: any;
@@ -84,9 +87,46 @@ const withTimeout = <T,>(promise: Promise<T>, ms: number, timeoutMessage = 'Oper
 const DailyAnnouncementsModal: React.FC<DailyAnnouncementsModalProps> = ({ announcements, onClose, headerImage, footerImage, onHeaderImageChange, onFooterImageChange }) => {
     const printableRef = useRef<HTMLDivElement>(null);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [viewMode, setViewMode] = useState<'select' | 'preview'>('select');
     
-    const sortedAnnouncements = [...announcements].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
+    // Sort by date (newest events first for selection)
+    const sortedAllAnnouncements = useMemo(() => {
+        return [...announcements].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [announcements]);
+
+    // Initialize selection with announcements created today
+    const [selectedIds, setSelectedIds] = useState<number[]>(() => {
+        const today = new Date();
+        return announcements.filter(ann => {
+             const createdDate = new Date(ann.id); // Assuming ID is timestamp
+             return createdDate.getDate() === today.getDate() &&
+                    createdDate.getMonth() === today.getMonth() &&
+                    createdDate.getFullYear() === today.getFullYear();
+        }).map(a => a.id);
+    });
+
+    // Filter announcements for the preview based on selection
+    const selectedAnnouncements = useMemo(() => {
+        return announcements
+            .filter(a => selectedIds.includes(a.id))
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // Sort by event date ascending for the newsletter
+    }, [announcements, selectedIds]);
+
+
+    const handleToggleSelection = (id: number) => {
+        setSelectedIds(prev => 
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const handleSelectAll = () => {
+        if (selectedIds.length === announcements.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(announcements.map(a => a.id));
+        }
+    };
+
     const handleImageUpload = (
       e: React.ChangeEvent<HTMLInputElement>,
       onImageReady: (imageDataUrl: string | null) => void
@@ -252,13 +292,106 @@ const DailyAnnouncementsModal: React.FC<DailyAnnouncementsModalProps> = ({ annou
         </div>
     );
 
+    // --- SELECTION VIEW ---
+    if (viewMode === 'select') {
+        return (
+            <Modal onClose={onClose} size="2xl">
+                <div className="flex flex-col max-h-[85vh]">
+                    <div className="flex-shrink-0 p-4 border-b border-[var(--color-border)]">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-[var(--color-accent)]">اختيار الإعلانات</h2>
+                            <button onClick={onClose} className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
+                                <XIcon className="w-6 h-6"/>
+                            </button>
+                        </div>
+                        <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+                            حدد الإعلانات التي تريد تضمينها في النشرة اليومية. الافتراضي هو الإعلانات التي تم إنشاؤها اليوم.
+                        </p>
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-semibold text-[var(--color-text-primary)]">
+                                تم اختيار {selectedIds.length} إعلان
+                            </span>
+                            <button 
+                                onClick={handleSelectAll}
+                                className="text-sm text-[var(--color-accent)] hover:underline"
+                            >
+                                {selectedIds.length === announcements.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                        {sortedAllAnnouncements.map(ann => {
+                            const isSelected = selectedIds.includes(ann.id);
+                            return (
+                                <div 
+                                    key={ann.id}
+                                    onClick={() => handleToggleSelection(ann.id)}
+                                    className={`flex items-center gap-4 p-3 rounded-lg border cursor-pointer transition-all ${
+                                        isSelected 
+                                        ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/10' 
+                                        : 'border-[var(--color-border)] hover:bg-[var(--color-card-bg)]'
+                                    }`}
+                                >
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                                        isSelected 
+                                        ? 'border-[var(--color-accent)] bg-[var(--color-accent)]' 
+                                        : 'border-[var(--color-text-secondary)]'
+                                    }`}>
+                                        {isSelected && <CheckCircleIcon className="w-4 h-4 text-white" />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className={`font-semibold text-sm truncate ${isSelected ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)]'}`}>
+                                            {ann.title}
+                                        </h4>
+                                        <div className="flex items-center gap-3 text-xs text-[var(--color-text-secondary)] mt-1">
+                                            <span>📅 {new Date(ann.date).toLocaleDateString('ar-EG')}</span>
+                                            <span>📍 {ann.location}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="flex-shrink-0 p-4 border-t border-[var(--color-border)] flex justify-end gap-3">
+                        <button 
+                            onClick={onClose}
+                            className="px-6 py-2 bg-[var(--color-text-secondary)]/20 text-[var(--color-text-primary)] font-semibold rounded-md hover:bg-[var(--color-text-secondary)]/30 transition-colors"
+                        >
+                            إلغاء
+                        </button>
+                        <button 
+                            onClick={() => setViewMode('preview')}
+                            disabled={selectedIds.length === 0}
+                            className="px-6 py-2 bg-[var(--color-accent)] text-white font-semibold rounded-md hover:brightness-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                            <span>التالي: معاينة النشرة</span>
+                            <ArrowRightIcon className="w-5 h-5 rotate-180" />
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+        );
+    }
+
+    // --- PREVIEW VIEW ---
     return (
         <Modal onClose={onClose} size="4xl">
              <div className="flex flex-col max-h-[85vh] relative">
                 {/* --- Control Panel --- */}
                  <div className="flex-shrink-0 p-4 border-b border-[var(--color-border)] print-hide">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-[var(--color-accent)]">إعداد نشرة إعلانات اليوم</h2>
+                        <div className="flex items-center gap-3">
+                             <button 
+                                onClick={() => setViewMode('select')}
+                                className="p-2 rounded-full bg-[var(--color-bg)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-accent)]"
+                                title="العودة للاختيار"
+                             >
+                                <ArrowRightIcon className="w-5 h-5" />
+                             </button>
+                             <h2 className="text-xl font-bold text-[var(--color-accent)]">معاينة النشرة</h2>
+                        </div>
                         <button onClick={onClose} className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"><XIcon className="w-6 h-6"/></button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -268,7 +401,7 @@ const DailyAnnouncementsModal: React.FC<DailyAnnouncementsModalProps> = ({ annou
                      <div className="text-center">
                         <button
                             onClick={handleDownloadImage}
-                            disabled={isDownloading || sortedAnnouncements.length === 0}
+                            disabled={isDownloading || selectedAnnouncements.length === 0}
                             className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-2.5 text-sm font-semibold rounded-full transition-all bg-[var(--color-accent)] text-white hover:brightness-90 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="تحميل النشرة كملف صورة"
                         >
@@ -294,16 +427,16 @@ const DailyAnnouncementsModal: React.FC<DailyAnnouncementsModalProps> = ({ annou
                             />
                         )}
                         <div className="p-6 sm:p-10 flex-grow">
-                            {sortedAnnouncements.length > 0 ? (
+                            {selectedAnnouncements.length > 0 ? (
                                 <div>
-                                    {sortedAnnouncements.map((ann) => (
+                                    {selectedAnnouncements.map((ann) => (
                                         <NewsletterAnnouncementItem key={ann.id} announcement={ann} />
                                     ))}
                                 </div>
                             ) : (
                                 <div className="text-center py-16 text-gray-500 flex flex-col items-center justify-center h-full">
                                     <CalendarDaysIcon className="w-16 h-16 mx-auto opacity-50" />
-                                    <p className="mt-4 text-lg">لم يتم إنشاء إعلانات جديدة اليوم.</p>
+                                    <p className="mt-4 text-lg">لم يتم تحديد أي إعلانات.</p>
                                 </div>
                             )}
                         </div>

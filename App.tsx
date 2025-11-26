@@ -839,7 +839,7 @@ const App: React.FC = () => {
                 )}
                 {isDailyAnnouncementsModalOpen && themeConfig && (
                     <DailyAnnouncementsModal 
-                        announcements={announcementsCreatedToday} 
+                        announcements={announcements} 
                         onClose={() => setIsDailyAnnouncementsModalOpen(false)}
                         headerImage={themeConfig.newsletterHeaderImage}
                         footerImage={themeConfig.newsletterFooterImage}
