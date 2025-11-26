@@ -1,5 +1,10 @@
 import { put, list } from '@vercel/blob';
 
+// Force Vercel to use Node.js runtime instead of Edge
+export const config = {
+  runtime: 'nodejs',
+};
+
 export default async function handler(req, res) {
   const FILENAME = 'student-activity-data.json';
   const token = process.env.BLOB_READ_WRITE_TOKEN;
