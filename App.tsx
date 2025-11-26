@@ -34,7 +34,12 @@ import ConfirmationModal from './components/ConfirmationModal';
 import { DocumentPlusIcon } from './components/icons/DocumentPlusIcon';
 import BulkAnnouncementModal from './components/BulkAnnouncementModal';
 
-const DATA_SOURCE_URL = 'https://gist.githubusercontent.com/alsenan-alt/90667b2526764f93d35e6328b72d0c4b/raw/student-activity-data.json'; 
+// ---------------------------------------------------------------------------
+// هام: تم وضع رابط npoint.io الخاص بك هنا.
+// هذا الرابط يحتوي على قاعدة البيانات (JSON) الخاصة بموقعك.
+// لتعديل البيانات، اذهب إلى npoint.io وعدل الملف ثم اضغط Save.
+// ---------------------------------------------------------------------------
+const DATA_SOURCE_URL = 'https://api.npoint.io/4586d00758ed82a0c03e'; 
 
 export const themePresets: { [key: string]: { name: string; settings: { [key: string]: string } } } = {
   dark: {
@@ -246,6 +251,35 @@ const App: React.FC = () => {
     
     // --- CORE APP LOGIC ---
 
+    const loadLocalData = useCallback(() => {
+        console.log("Loading local data (Priority 2 or Fallback).");
+        try {
+            // First try localStorage for any saved changes
+            const localDataString = localStorage.getItem('studentActivityData');
+            if (localDataString) {
+                const localData = JSON.parse(localDataString);
+                if (localData && localData.links && localData.themeConfig) {
+                    setLinks(localData.links);
+                    setAnnouncements(localData.announcements || []);
+                    setThemeConfig(ensureThemeDefaults(localData.themeConfig));
+                    setAdminPassword(localData.adminPassword || 'admin');
+                    console.log("Data loaded successfully from localStorage.");
+                    return true;
+                }
+            }
+        } catch (error) {
+            console.error("Could not parse localStorage data.", error);
+        }
+
+        // If no localStorage, or error, load defaults
+        console.log("Loading hardcoded DEFAULT_DATA.");
+        setLinks(DEFAULT_DATA.links);
+        setAnnouncements(DEFAULT_DATA.announcements);
+        setThemeConfig(DEFAULT_DATA.themeConfig);
+        setAdminPassword(DEFAULT_DATA.adminPassword);
+        return true;
+    }, []);
+
     const loadInitialData = useCallback(async (isRefresh = false) => {
         if (isRefresh) {
             setIsRefreshing(true);
@@ -253,84 +287,69 @@ const App: React.FC = () => {
             setIsLoading(true);
         }
 
+        // 1. If no URL is configured, load local data immediately and stop.
+        if (!DATA_SOURCE_URL) {
+             loadLocalData();
+             setFetchError(null);
+             setIsLoading(false);
+             setIsRefreshing(false);
+             if (isRefresh) addToast("تم إعادة تعيين البيانات إلى الوضع الافتراضي المحلي.");
+             return;
+        }
+
         let errorMessage: string | null = null;
         let success = false;
 
         try {
-            if (DATA_SOURCE_URL) {
-                const response = await fetch(DATA_SOURCE_URL);
-                if (!response.ok) {
-                    if (response.status === 404) {
-                        errorMessage = 'فشل الاتصال: لم يتم العثور على الملف على الرابط (خطأ 404). الرجاء التأكد من صحة الرابط.';
-                    } else {
-                        errorMessage = `فشل الاتصال بالخادم (خطأ ${response.status}).`;
-                    }
+            const response = await fetch(DATA_SOURCE_URL);
+            if (!response.ok) {
+                if (response.status === 404) {
+                    errorMessage = 'فشل الاتصال: لم يتم العثور على الملف (خطأ 404). تأكد من صحة الرابط.';
                 } else {
-                    const serverData = await response.json();
-                    if (serverData && serverData.links && serverData.themeConfig) {
-                        setLinks(serverData.links);
-                        setAnnouncements(serverData.announcements || []);
-                        setThemeConfig(ensureThemeDefaults(serverData.themeConfig));
-                        setAdminPassword(serverData.adminPassword || 'admin');
-                        localStorage.setItem('studentActivityData', JSON.stringify(serverData));
-                        console.log("Data loaded successfully from Gist.");
-                        setFetchError(null);
-                        success = true;
-                    } else {
-                       errorMessage = 'البيانات المستلمة من الرابط غير صالحة.';
-                    }
+                    errorMessage = `فشل الاتصال بالخادم (خطأ ${response.status}).`;
                 }
             } else {
-                errorMessage = 'لم يتم تكوين رابط مصدر البيانات. يتم عرض البيانات المحلية.';
+                const serverData = await response.json();
+                // Support both direct array/object or wrapped structure
+                // Adjust this check based on your npoint JSON structure
+                const dataToUse = serverData.record || serverData; // jsonbin uses .record, npoint is direct usually
+
+                if (dataToUse && dataToUse.links && dataToUse.themeConfig) {
+                    setLinks(dataToUse.links);
+                    setAnnouncements(dataToUse.announcements || []);
+                    setThemeConfig(ensureThemeDefaults(dataToUse.themeConfig));
+                    setAdminPassword(dataToUse.adminPassword || 'admin');
+                    
+                    // Save to local storage as backup
+                    localStorage.setItem('studentActivityData', JSON.stringify(dataToUse));
+                    console.log("Data loaded successfully from external source.");
+                    setFetchError(null);
+                    success = true;
+                } else {
+                   errorMessage = 'البيانات المستلمة غير صالحة.';
+                }
             }
         } catch (error) {
-            console.error("Could not fetch/parse server data, falling back to local.", error);
-            errorMessage = 'حدث خطأ في الشبكة أو في تحليل البيانات. سيتم عرض آخر نسخة محفوظة.';
+            console.error("Could not fetch/parse server data.", error);
+            errorMessage = 'تعذر الاتصال بمصدر البيانات. سيتم عرض البيانات المحلية.';
         }
 
         if (errorMessage && !success) {
             setFetchError(errorMessage);
-            if (!isRefresh) addToast(errorMessage, "error");
-
-            // Priority 2: Fallback to localStorage
-            try {
-                const localDataString = localStorage.getItem('studentActivityData');
-                if (localDataString) {
-                    const localData = JSON.parse(localDataString);
-                    if (localData && localData.links && localData.themeConfig) {
-                        setLinks(localData.links);
-                        setAnnouncements(localData.announcements || []);
-                        setThemeConfig(ensureThemeDefaults(localData.themeConfig));
-                        setAdminPassword(localData.adminPassword || 'admin');
-                         console.log("Data loaded successfully from localStorage.");
-                         success = true; // يعتبر نجاحا لأنه حمل البيانات المخزنة
-                    }
-                }
-            } catch (error) {
-                console.error("Could not parse local data.", error);
-            }
-        }
-        
-        if(!success) {
-             // Priority 3: Fallback to hardcoded defaults
-            console.log("Falling back to default data.");
-            setLinks(DEFAULT_DATA.links);
-            setAnnouncements(DEFAULT_DATA.announcements);
-            setThemeConfig(DEFAULT_DATA.themeConfig);
-            setAdminPassword(DEFAULT_DATA.adminPassword);
+            if (isRefresh) addToast(errorMessage, "error");
+            // Fallback to local data
+            loadLocalData();
         }
 
         if (isRefresh) {
             if (success) {
                 addToast('تم تحديث البيانات بنجاح.');
-            } else {
-                addToast('فشل تحديث البيانات. تحقق من اتصالك بالإنترنت.', 'error');
             }
             setIsRefreshing(false);
         } else {
             setIsLoading(false);
         }
-    }, [addToast]);
+    }, [addToast, loadLocalData]);
 
     // Effect for loading initial data on mount
     useEffect(() => {
@@ -387,7 +406,7 @@ const App: React.FC = () => {
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-            addToast('تم تصدير الإعدادات بنجاح.');
+            addToast('تم تصدير الإعدادات بنجاح. يمكنك رفع هذا الملف إلى npoint.io');
         } catch (error) {
             console.error('Failed to export data', error);
             addToast('حدث خطأ أثناء تصدير الإعدادات.', 'error');
@@ -432,7 +451,6 @@ const App: React.FC = () => {
         setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
     };
     
-    // FIX: Defined closeLinkForm function to resolve the error.
     const closeLinkForm = () => {
         setEditingLink(null);
         setIsLinkFormOpen(false);
