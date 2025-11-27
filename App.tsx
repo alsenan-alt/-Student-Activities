@@ -35,11 +35,9 @@ import { DocumentPlusIcon } from './components/icons/DocumentPlusIcon';
 import BulkAnnouncementModal from './components/BulkAnnouncementModal';
 
 // ---------------------------------------------------------------------------
-// هام: تم وضع رابط npoint.io الخاص بك هنا.
-// هذا الرابط يحتوي على قاعدة البيانات (JSON) الخاصة بموقعك.
-// لتعديل البيانات، اذهب إلى npoint.io وعدل الملف ثم اضغط Save.
+// رابط مصدر البيانات (JSON) لتخزين واسترجاع الإعلانات والروابط
 // ---------------------------------------------------------------------------
-const DATA_SOURCE_URL = 'https://api.npoint.io/4586d00758ed82a0c03e'; 
+const DATA_SOURCE_URL = 'https://api.npoint.io/d0337836668af2914ece'; 
 
 export const themePresets: { [key: string]: { name: string; settings: { [key: string]: string } } } = {
   dark: {
@@ -301,32 +299,43 @@ const App: React.FC = () => {
         let success = false;
 
         try {
-            const response = await fetch(DATA_SOURCE_URL);
+            // Add timestamp to query to bypass browser cache
+            const response = await fetch(`${DATA_SOURCE_URL}?t=${Date.now()}`);
             if (!response.ok) {
                 if (response.status === 404) {
-                    errorMessage = 'فشل الاتصال: لم يتم العثور على الملف (خطأ 404). تأكد من صحة الرابط.';
+                    errorMessage = 'فشل الاتصال: لم يتم العثور على الملف (خطأ 404). تأكد من صحة الرابط في npoint.';
                 } else {
-                    errorMessage = `فشل الاتصال بالخادم (خطأ ${response.status}).`;
+                    errorMessage = `فشل الاتصال بالخادم (رمز ${response.status}).`;
                 }
             } else {
-                const serverData = await response.json();
-                // Support both direct array/object or wrapped structure
-                // Adjust this check based on your npoint JSON structure
-                const dataToUse = serverData.record || serverData; // jsonbin uses .record, npoint is direct usually
+                const text = await response.text();
+                try {
+                    const serverData = JSON.parse(text);
+                    // Support both direct array/object or wrapped structure
+                    const dataToUse = serverData.record || serverData;
 
-                if (dataToUse && dataToUse.links && dataToUse.themeConfig) {
-                    setLinks(dataToUse.links);
-                    setAnnouncements(dataToUse.announcements || []);
-                    setThemeConfig(ensureThemeDefaults(dataToUse.themeConfig));
-                    setAdminPassword(dataToUse.adminPassword || 'admin');
-                    
-                    // Save to local storage as backup
-                    localStorage.setItem('studentActivityData', JSON.stringify(dataToUse));
-                    console.log("Data loaded successfully from external source.");
-                    setFetchError(null);
-                    success = true;
-                } else {
-                   errorMessage = 'البيانات المستلمة غير صالحة.';
+                    if (dataToUse && dataToUse.links && dataToUse.themeConfig) {
+                        setLinks(dataToUse.links);
+                        setAnnouncements(dataToUse.announcements || []);
+                        setThemeConfig(ensureThemeDefaults(dataToUse.themeConfig));
+                        setAdminPassword(dataToUse.adminPassword || 'admin');
+                        
+                        // Save to local storage as backup
+                        try {
+                            localStorage.setItem('studentActivityData', JSON.stringify(dataToUse));
+                        } catch (e) {
+                            console.warn("Could not backup to localStorage", e);
+                        }
+                        
+                        console.log("Data loaded successfully from external source.");
+                        setFetchError(null);
+                        success = true;
+                    } else {
+                        errorMessage = 'البيانات المستلمة غير صالحة.';
+                    }
+                } catch (e) {
+                    console.error("JSON Parse Error", e);
+                    errorMessage = 'تنسيق البيانات غير صحيح (JSON).';
                 }
             }
         } catch (error) {
@@ -358,14 +367,50 @@ const App: React.FC = () => {
 
     // Effect for saving data to localStorage on changes (admin's draft)
     useEffect(() => {
-        if (!isLoading && themeConfig && userRole === 'admin') {
+        if (isLoading || !themeConfig || userRole !== 'admin') return;
+
+        const saveData = () => {
             try {
                 const appData = { links, announcements, themeConfig, adminPassword };
                 localStorage.setItem('studentActivityData', JSON.stringify(appData));
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Failed to save to localStorage", error);
+                // Handle QuotaExceededError - names vary by browser
+                if (error.name === 'QuotaExceededError' || 
+                    error.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+                    error.message.includes('quota') ||
+                    error.code === 22) {
+                     
+                     try {
+                         // Fallback: Attempt to save without large imageDataUrl strings to save space
+                         const liteAnnouncements = announcements.map(ann => {
+                             const { imageDataUrl, ...rest } = ann;
+                             return rest;
+                         });
+                         
+                         const liteAppData = { 
+                             links, 
+                             announcements: liteAnnouncements, 
+                             themeConfig, 
+                             adminPassword 
+                         };
+                         
+                         localStorage.setItem('studentActivityData', JSON.stringify(liteAppData));
+                         console.warn("LocalStorage quota full. Saved data without cached images.");
+                     } catch (retryError) {
+                         // If even lite version fails, just log it. 
+                         // We avoid showing a toast to prevent spamming the user on every keystroke.
+                         console.error("Could not save to localStorage even without images.", retryError);
+                     }
+                }
             }
-        }
+        };
+
+        // Debounce the save operation to avoid hammering localStorage on every keystroke
+        const timeoutId = setTimeout(saveData, 1000);
+
+        return () => clearTimeout(timeoutId);
+
     }, [links, announcements, themeConfig, adminPassword, isLoading, userRole]);
     
     // Effect for applying theme
@@ -807,55 +852,63 @@ const App: React.FC = () => {
                         />
                     </div>
                 )}
-
-                {/* --- Modals --- */}
-                {isLinkFormOpen && (
-                    <Modal onClose={closeLinkForm} size="2xl">
-                        <AddLinkForm onSave={handleSaveLink} onClose={closeLinkForm} existingLink={editingLink} />
-                    </Modal>
-                )}
-                {isAnnouncementFormOpen && (
-                    <Modal onClose={closeAnnouncementForm} size="4xl">
-                        <AnnouncementForm onSave={handleSaveAnnouncement} onClose={closeAnnouncementForm} existingAnnouncement={editingAnnouncement} />
-                    </Modal>
-                )}
-                {isBulkModalOpen && (
-                    <BulkAnnouncementModal onClose={() => setIsBulkModalOpen(false)} onSave={handleBulkSaveAnnouncements} />
-                )}
-                {isPasswordModalOpen && (
-                    <PasswordModal onClose={() => setIsPasswordModalOpen(false)} onVerify={handleVerifyPassword} />
-                )}
-                {isChangePasswordModalOpen && (
-                    <ChangePasswordModal onClose={() => setChangePasswordModalOpen(false)} onChangePassword={handleChangePassword} />
-                )}
-                {isThemeModalOpen && themeConfig && (
-                    <ThemeModal onClose={() => setIsThemeModalOpen(false)} onSave={handleSaveTheme} currentTheme={themeConfig} />
-                )}
-                {isStatisticsModalOpen && (
-                    <StatisticsModal announcements={announcements} onClose={() => setIsStatisticsModalOpen(false)} />
-                )}
-                {isReportModalOpen && (
-                    <ReportModal announcements={announcements} onClose={() => setIsReportModalOpen(false)} />
-                )}
-                {isDailyAnnouncementsModalOpen && themeConfig && (
-                    <DailyAnnouncementsModal 
-                        announcements={announcements} 
-                        onClose={() => setIsDailyAnnouncementsModalOpen(false)}
-                        headerImage={themeConfig.newsletterHeaderImage}
-                        footerImage={themeConfig.newsletterFooterImage}
-                        onHeaderImageChange={(image) => setThemeConfig(prev => prev ? { ...prev, newsletterHeaderImage: image } : null)}
-                        onFooterImageChange={(image) => setThemeConfig(prev => prev ? { ...prev, newsletterFooterImage: image } : null)}
-                    />
-                )}
-                {isConfirmModalOpen && itemToDelete && (
-                    <ConfirmationModal
-                        onClose={handleCloseConfirmModal}
-                        onConfirm={handleConfirmDelete}
-                        title="تأكيد الحذف"
-                        message={`هل أنت متأكد أنك تريد حذف هذا ${itemToDelete.type === 'link' ? 'الرابط' : 'الإعلان'}؟ لا يمكن التراجع عن هذا الإجراء.`}
-                    />
-                )}
             </main>
+
+            {isLinkFormOpen && (
+                <Modal onClose={closeLinkForm} size="lg">
+                    <AddLinkForm onSave={handleSaveLink} onClose={closeLinkForm} existingLink={editingLink} />
+                </Modal>
+            )}
+
+            {isAnnouncementFormOpen && (
+                <Modal onClose={closeAnnouncementForm} size="4xl">
+                    <AnnouncementForm onSave={handleSaveAnnouncement} onClose={closeAnnouncementForm} existingAnnouncement={editingAnnouncement} />
+                </Modal>
+            )}
+
+            {isPasswordModalOpen && (
+                <PasswordModal onClose={() => setIsPasswordModalOpen(false)} onVerify={handleVerifyPassword} />
+            )}
+            
+            {isChangePasswordModalOpen && (
+                <ChangePasswordModal onClose={() => setChangePasswordModalOpen(false)} onChangePassword={handleChangePassword} />
+            )}
+            
+            {isThemeModalOpen && themeConfig && (
+                <ThemeModal onClose={() => setIsThemeModalOpen(false)} onSave={handleSaveTheme} currentTheme={themeConfig} />
+            )}
+
+            {isStatisticsModalOpen && (
+                <StatisticsModal announcements={announcements} onClose={() => setIsStatisticsModalOpen(false)} />
+            )}
+
+            {isReportModalOpen && (
+                <ReportModal announcements={announcements} onClose={() => setIsReportModalOpen(false)} />
+            )}
+
+            {isDailyAnnouncementsModalOpen && themeConfig && (
+                <DailyAnnouncementsModal 
+                    announcements={announcements} 
+                    onClose={() => setIsDailyAnnouncementsModalOpen(false)}
+                    headerImage={themeConfig.newsletterHeaderImage}
+                    footerImage={themeConfig.newsletterFooterImage}
+                    onHeaderImageChange={(img) => setThemeConfig(prev => prev ? ({...prev, newsletterHeaderImage: img}) : null)}
+                    onFooterImageChange={(img) => setThemeConfig(prev => prev ? ({...prev, newsletterFooterImage: img}) : null)}
+                />
+            )}
+
+            {isBulkModalOpen && (
+                <BulkAnnouncementModal onClose={() => setIsBulkModalOpen(false)} onSave={handleBulkSaveAnnouncements} />
+            )}
+
+            {isConfirmModalOpen && (
+                <ConfirmationModal 
+                    onClose={handleCloseConfirmModal} 
+                    onConfirm={handleConfirmDelete}
+                    title="تأكيد الحذف"
+                    message={itemToDelete?.type === 'link' ? "هل أنت متأكد أنك تريد حذف هذا الرابط؟ لا يمكن التراجع عن هذا الإجراء." : "هل أنت متأكد أنك تريد حذف هذا الإعلان؟ لا يمكن التراجع عن هذا الإجراء."}
+                />
+            )}
         </div>
     );
 };
