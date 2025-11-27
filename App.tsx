@@ -35,9 +35,9 @@ import { DocumentPlusIcon } from './components/icons/DocumentPlusIcon';
 import BulkAnnouncementModal from './components/BulkAnnouncementModal';
 
 // ---------------------------------------------------------------------------
-// رابط مصدر البيانات (JSON) لتخزين واسترجاع الإعلانات والروابط
+// الرابط الافتراضي (يمكن تغييره من داخل التطبيق الآن)
 // ---------------------------------------------------------------------------
-const DATA_SOURCE_URL = 'https://api.npoint.io/d0337836668af2914ece'; 
+const DEFAULT_SOURCE_URL = 'https://api.npoint.io/d0337836668af2914ece';
 
 export const themePresets: { [key: string]: { name: string; settings: { [key: string]: string } } } = {
   dark: {
@@ -198,6 +198,10 @@ const ITEMS_PER_PAGE = 5;
 
 const App: React.FC = () => {
     // --- STATE & REFS ---
+    // Initialize dataSourceUrl from localStorage or fallback to default
+    const [dataSourceUrl, setDataSourceUrl] = useState<string>(() => {
+        return localStorage.getItem('custom_data_source_url') || DEFAULT_SOURCE_URL;
+    });
     const [links, setLinks] = useState<LinkItem[]>([]);
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [themeConfig, setThemeConfig] = useState<ThemeConfig | null>(null);
@@ -286,7 +290,7 @@ const App: React.FC = () => {
         }
 
         // 1. If no URL is configured, load local data immediately and stop.
-        if (!DATA_SOURCE_URL) {
+        if (!dataSourceUrl) {
              loadLocalData();
              setFetchError(null);
              setIsLoading(false);
@@ -300,10 +304,10 @@ const App: React.FC = () => {
 
         try {
             // Add timestamp to query to bypass browser cache
-            const response = await fetch(`${DATA_SOURCE_URL}?t=${Date.now()}`);
+            const response = await fetch(`${dataSourceUrl}?t=${Date.now()}`);
             if (!response.ok) {
                 if (response.status === 404) {
-                    errorMessage = 'فشل الاتصال: لم يتم العثور على الملف (خطأ 404). تأكد من صحة الرابط في npoint.';
+                    errorMessage = 'فشل الاتصال: لم يتم العثور على الملف (خطأ 404). تأكد من صحة الرابط.';
                 } else {
                     errorMessage = `فشل الاتصال بالخادم (رمز ${response.status}).`;
                 }
@@ -358,7 +362,7 @@ const App: React.FC = () => {
         } else {
             setIsLoading(false);
         }
-    }, [addToast, loadLocalData]);
+    }, [addToast, loadLocalData, dataSourceUrl]);
 
     // Effect for loading initial data on mount
     useEffect(() => {
@@ -375,14 +379,14 @@ const App: React.FC = () => {
                 localStorage.setItem('studentActivityData', JSON.stringify(appData));
             } catch (error: any) {
                 console.error("Failed to save to localStorage", error);
-                // Handle QuotaExceededError - names vary by browser
+                // Handle QuotaExceededError
                 if (error.name === 'QuotaExceededError' || 
                     error.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
                     error.message.includes('quota') ||
                     error.code === 22) {
                      
                      try {
-                         // Fallback: Attempt to save without large imageDataUrl strings to save space
+                         // Fallback: Attempt to save without large imageDataUrl strings
                          const liteAnnouncements = announcements.map(ann => {
                              const { imageDataUrl, ...rest } = ann;
                              return rest;
@@ -398,17 +402,13 @@ const App: React.FC = () => {
                          localStorage.setItem('studentActivityData', JSON.stringify(liteAppData));
                          console.warn("LocalStorage quota full. Saved data without cached images.");
                      } catch (retryError) {
-                         // If even lite version fails, just log it. 
-                         // We avoid showing a toast to prevent spamming the user on every keystroke.
                          console.error("Could not save to localStorage even without images.", retryError);
                      }
                 }
             }
         };
 
-        // Debounce the save operation to avoid hammering localStorage on every keystroke
         const timeoutId = setTimeout(saveData, 1000);
-
         return () => clearTimeout(timeoutId);
 
     }, [links, announcements, themeConfig, adminPassword, isLoading, userRole]);
@@ -437,6 +437,12 @@ const App: React.FC = () => {
     
     
     // --- EVENT HANDLERS ---
+    const handleDataSourceUrlChange = (newUrl: string) => {
+        setDataSourceUrl(newUrl);
+        localStorage.setItem('custom_data_source_url', newUrl);
+        addToast('تم تحديث الرابط. يرجى الضغط على زر "تحديث البيانات".');
+    };
+
     const handleExport = () => {
         if (!themeConfig) return;
         try {
@@ -726,7 +732,12 @@ const App: React.FC = () => {
                 
                 {userRole === 'admin' && (
                     <div className="flex flex-col items-center justify-center gap-4 mb-8 print-hide">
-                         <DataSourceStatus url={DATA_SOURCE_URL} isLoading={isRefreshing} error={fetchError} />
+                         <DataSourceStatus 
+                            url={dataSourceUrl} 
+                            isLoading={isRefreshing} 
+                            error={fetchError} 
+                            onUrlChange={handleDataSourceUrlChange}
+                        />
                          <div className="flex flex-wrap items-center justify-center gap-2">
                              <button
                                 onClick={() => loadInitialData(true)}
