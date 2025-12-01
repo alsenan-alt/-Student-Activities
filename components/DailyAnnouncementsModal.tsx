@@ -10,26 +10,99 @@ import { DownloadIcon } from './icons/DownloadIcon';
 import { TrashIcon } from './icons/TrashIcon';
 import { ArrowRightIcon } from './icons/ArrowRightIcon';
 import { CheckCircleIcon } from './icons/CheckCircleIcon';
+import { PencilIcon } from './icons/PencilIcon';
 
 // This lets TypeScript know that html2canvas will be available globally from the script tag.
 declare const html2canvas: any;
 
-const NewsletterAnnouncementItem: React.FC<{ announcement: Announcement }> = ({ announcement }) => {
+interface AnnouncementOverride {
+    customImage?: string;
+    imageMode?: 'cover' | 'contain' | 'auto';
+}
+
+const NewsletterAnnouncementItem: React.FC<{ 
+    announcement: Announcement;
+    override?: AnnouncementOverride;
+    onOverride: (data: Partial<AnnouncementOverride>) => void;
+}> = ({ announcement, override, onOverride }) => {
     const eventDate = new Date(announcement.date);
     const formattedDate = eventDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
     const formattedTime = eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-    const displayImageUrl = announcement.imageDataUrl || announcement.imageUrl;
+    
+    // Set default mode to 'auto' (Full/Natural)
+    const imageMode = override?.imageMode || 'auto';
+    const displayImageUrl = override?.customImage || announcement.imageDataUrl || announcement.imageUrl;
+
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (loadEvent) => {
+                const result = loadEvent.target?.result as string;
+                onOverride({ customImage: result });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const toggleImageMode = () => {
+        const modes: ('cover' | 'contain' | 'auto')[] = ['cover', 'auto', 'contain'];
+        const nextMode = modes[(modes.indexOf(imageMode) + 1) % modes.length];
+        onOverride({ imageMode: nextMode });
+    };
+
+    let imageClasses = "w-full rounded-lg shadow-md transition-all duration-200 ";
+    let containerClasses = "w-full sm:w-64 flex-shrink-0 relative group/image";
+
+    if (imageMode === 'cover') {
+        imageClasses += "aspect-[16/9] object-cover";
+    } else if (imageMode === 'contain') {
+        imageClasses += "aspect-[16/9] object-contain bg-gray-100";
+    } else if (imageMode === 'auto') {
+        imageClasses += "h-auto object-contain";
+    }
+
+    const modeLabels = {
+        cover: 'قص',
+        auto: 'كامل (افتراضي)',
+        contain: 'احتواء'
+    };
 
     return (
-        <div className="flex flex-col sm:flex-row gap-6 mb-8 items-start text-gray-800">
-            {/* Image Section - Increased width on larger screens for better clarity */}
-            <div className="w-full sm:w-64 flex-shrink-0">
+        <div className="flex flex-col sm:flex-row gap-6 mb-8 items-start text-gray-800 group/row">
+            {/* Image Section */}
+            <div className={containerClasses}>
                  <img
                     src={displayImageUrl}
                     alt={announcement.title}
-                    className="w-full aspect-[16/9] object-cover rounded-lg shadow-md"
-                    crossOrigin={announcement.imageDataUrl ? undefined : "anonymous"}
+                    className={imageClasses}
+                    crossOrigin={displayImageUrl.startsWith('data:') ? undefined : "anonymous"}
                  />
+                 
+                 {/* Image Controls (Visible on hover, Hidden in print) */}
+                 <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover/image:opacity-100 transition-opacity duration-200 print-hide z-10">
+                    <label className="cursor-pointer bg-white/90 text-gray-700 hover:text-[var(--color-accent)] p-1.5 rounded shadow-sm text-xs font-semibold flex items-center gap-1 backdrop-blur-sm border border-gray-200">
+                        <PencilIcon className="w-3 h-3" />
+                        <span>تغيير</span>
+                        <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                    </label>
+                    <button 
+                        onClick={toggleImageMode}
+                        className="bg-white/90 text-gray-700 hover:text-[var(--color-accent)] p-1.5 rounded shadow-sm text-xs font-semibold flex items-center gap-1 backdrop-blur-sm border border-gray-200"
+                    >
+                        <ArrowRightIcon className="w-3 h-3 rotate-90" />
+                        <span>{modeLabels[imageMode]}</span>
+                    </button>
+                    {override?.customImage && (
+                        <button 
+                            onClick={() => onOverride({ customImage: undefined })}
+                            className="bg-red-500/90 text-white hover:bg-red-600 p-1.5 rounded shadow-sm text-xs font-semibold flex items-center gap-1 backdrop-blur-sm"
+                            title="استعادة الصورة الأصلية"
+                        >
+                            <TrashIcon className="w-3 h-3" />
+                        </button>
+                    )}
+                 </div>
             </div>
 
             {/* Details Section */}
@@ -88,6 +161,7 @@ const DailyAnnouncementsModal: React.FC<DailyAnnouncementsModalProps> = ({ annou
     const printableRef = useRef<HTMLDivElement>(null);
     const [isDownloading, setIsDownloading] = useState(false);
     const [viewMode, setViewMode] = useState<'select' | 'preview'>('select');
+    const [overrides, setOverrides] = useState<Record<number, AnnouncementOverride>>({});
     
     // Sort by date (newest events first for selection)
     const sortedAllAnnouncements = useMemo(() => {
@@ -125,6 +199,13 @@ const DailyAnnouncementsModal: React.FC<DailyAnnouncementsModalProps> = ({ annou
         } else {
             setSelectedIds(announcements.map(a => a.id));
         }
+    };
+
+    const handleOverride = (id: number, data: Partial<AnnouncementOverride>) => {
+        setOverrides(prev => ({
+            ...prev,
+            [id]: { ...prev[id], ...data }
+        }));
     };
 
     const handleImageUpload = (
@@ -210,8 +291,9 @@ const DailyAnnouncementsModal: React.FC<DailyAnnouncementsModalProps> = ({ annou
         clone.style.top = '-9999px';
         clone.style.left = '-9999px';
         // Ensure the clone has defined dimensions for html2canvas
-        clone.style.width = `${element.offsetWidth}px`;
-        clone.style.height = `${element.offsetHeight}px`;
+        // We set a fixed width for the capture to ensure consistency (like A4 width approx)
+        clone.style.width = '800px'; 
+        clone.style.height = 'auto';
         
         document.body.appendChild(clone);
     
@@ -226,11 +308,12 @@ const DailyAnnouncementsModal: React.FC<DailyAnnouncementsModalProps> = ({ annou
                 useCORS: true,
                 scale: 2,
                 backgroundColor: '#ffffff',
+                windowWidth: 800,
             });
     
             const canvas = await withTimeout(
                 canvasPromise,
-                15000,
+                20000,
                 'Image generation timed out. This may be due to network issues with the image proxy.'
             );
             return canvas as HTMLCanvasElement;
@@ -430,7 +513,12 @@ const DailyAnnouncementsModal: React.FC<DailyAnnouncementsModalProps> = ({ annou
                             {selectedAnnouncements.length > 0 ? (
                                 <div>
                                     {selectedAnnouncements.map((ann) => (
-                                        <NewsletterAnnouncementItem key={ann.id} announcement={ann} />
+                                        <NewsletterAnnouncementItem 
+                                            key={ann.id} 
+                                            announcement={ann}
+                                            override={overrides[ann.id]}
+                                            onOverride={(data) => handleOverride(ann.id, data)}
+                                        />
                                     ))}
                                 </div>
                             ) : (

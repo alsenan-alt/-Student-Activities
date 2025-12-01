@@ -343,7 +343,7 @@ const App: React.FC = () => {
                 }
             }
         } catch (error) {
-            console.error("Could not fetch/parse server data.", error);
+            console.warn("Could not fetch/parse server data. Using local fallback.", error);
             errorMessage = 'تعذر الاتصال بمصدر البيانات. سيتم عرض البيانات المحلية.';
         }
 
@@ -374,36 +374,50 @@ const App: React.FC = () => {
         if (isLoading || !themeConfig || userRole !== 'admin') return;
 
         const saveData = () => {
+            const appData = { links, announcements, themeConfig, adminPassword };
             try {
-                const appData = { links, announcements, themeConfig, adminPassword };
                 localStorage.setItem('studentActivityData', JSON.stringify(appData));
             } catch (error: any) {
-                console.error("Failed to save to localStorage", error);
-                // Handle QuotaExceededError
-                if (error.name === 'QuotaExceededError' || 
-                    error.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
-                    error.message.includes('quota') ||
-                    error.code === 22) {
-                     
+                // Identify quota error
+                const isQuotaError = error.name === 'QuotaExceededError' || 
+                                     error.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+                                     (typeof error.message === 'string' && error.message.toLowerCase().includes('quota')) ||
+                                     error.code === 22;
+
+                if (isQuotaError) {
                      try {
-                         // Fallback: Attempt to save without large imageDataUrl strings
+                         // Fallback: Attempt to save without large base64 strings
+                         
+                         // 1. Strip images from announcements
                          const liteAnnouncements = announcements.map(ann => {
+                             // eslint-disable-next-line @typescript-eslint/no-unused-vars
                              const { imageDataUrl, ...rest } = ann;
                              return rest;
                          });
                          
+                         // 2. Strip images from theme config if they are large base64 strings
+                         const liteThemeConfig = { ...themeConfig };
+                         if (liteThemeConfig.newsletterHeaderImage?.startsWith('data:')) {
+                             liteThemeConfig.newsletterHeaderImage = null;
+                         }
+                         if (liteThemeConfig.newsletterFooterImage?.startsWith('data:')) {
+                             liteThemeConfig.newsletterFooterImage = null;
+                         }
+                         
                          const liteAppData = { 
                              links, 
                              announcements: liteAnnouncements, 
-                             themeConfig, 
+                             themeConfig: liteThemeConfig, 
                              adminPassword 
                          };
                          
                          localStorage.setItem('studentActivityData', JSON.stringify(liteAppData));
-                         console.warn("LocalStorage quota full. Saved data without cached images.");
+                         console.warn("LocalStorage quota limit reached. Data saved without high-res images to preserve text data.");
                      } catch (retryError) {
-                         console.error("Could not save to localStorage even without images.", retryError);
+                         console.error("LocalStorage is full. Unable to save data locally.", retryError);
                      }
+                } else {
+                    console.error("Failed to save to localStorage:", error);
                 }
             }
         };
