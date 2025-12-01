@@ -26,7 +26,13 @@ const NewsletterAnnouncementItem: React.FC<{
     onOverride: (data: Partial<AnnouncementOverride>) => void;
 }> = ({ announcement, override, onOverride }) => {
     const eventDate = new Date(announcement.date);
-    const formattedDate = eventDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    
+    // Manual formatting to ensure Day Month Year order
+    const day = eventDate.getDate();
+    const month = eventDate.toLocaleString('en-GB', { month: 'short' });
+    const year = eventDate.getFullYear();
+    const formattedDate = `${day} ${month} ${year}`;
+
     const formattedTime = eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
     
     // Set default mode to 'auto' (Full/Natural)
@@ -69,7 +75,7 @@ const NewsletterAnnouncementItem: React.FC<{
     };
 
     return (
-        <div className="flex flex-col sm:flex-row gap-6 mb-8 items-start text-gray-800 group/row">
+        <div className="flex flex-col sm:flex-row gap-6 mb-8 items-center text-gray-800 group/row">
             {/* Image Section */}
             <div className={containerClasses}>
                  <img
@@ -112,11 +118,11 @@ const NewsletterAnnouncementItem: React.FC<{
                 <div className="mt-4 space-y-2 text-sm text-gray-700">
                     <div className="flex items-center gap-2">
                         <CalendarDaysIcon className="w-5 h-5 text-gray-500" />
-                        <span>{formattedDate}</span>
+                        <span dir="ltr">{formattedDate}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <ClockIcon className="w-5 h-5 text-gray-500" />
-                        <span>{formattedTime}</span>
+                        <span dir="ltr">{formattedTime}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <LocationMarkerIcon className="w-5 h-5 text-gray-500" />
