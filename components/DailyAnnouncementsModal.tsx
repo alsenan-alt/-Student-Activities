@@ -27,9 +27,9 @@ const NewsletterAnnouncementItem: React.FC<{
 }> = ({ announcement, override, onOverride }) => {
     const eventDate = new Date(announcement.date);
     
-    // Manual formatting to ensure Day Month Year order
+    // Explicit manual formatting: Day Month Year (e.g., 4 Dec 2025)
     const day = eventDate.getDate();
-    const month = eventDate.toLocaleString('en-GB', { month: 'short' });
+    const month = eventDate.toLocaleString('en-US', { month: 'short' });
     const year = eventDate.getFullYear();
     const formattedDate = `${day} ${month} ${year}`;
 
@@ -75,8 +75,8 @@ const NewsletterAnnouncementItem: React.FC<{
     };
 
     return (
-        <div className="flex flex-col sm:flex-row gap-6 mb-8 items-center text-gray-800 group/row">
-            {/* Image Section */}
+        <div className="flex flex-col sm:flex-row gap-6 mb-8 items-center text-gray-800 group/row" dir="ltr">
+            {/* Image Section - now on the Left (in LTR mode for correct date/time display) */}
             <div className={containerClasses}>
                  <img
                     src={displayImageUrl}
@@ -111,22 +111,22 @@ const NewsletterAnnouncementItem: React.FC<{
                  </div>
             </div>
 
-            {/* Details Section */}
-            <div className="flex-1">
-                <h3 className="font-bold text-lg text-[#006A60] mb-1" style={{fontFamily: "'Tajawal', sans-serif"}}>{announcement.title}</h3>
-                <p className="text-gray-600 text-sm">{announcement.details || 'Explore Student Clubs Activates through a dedicated website.'}</p>
-                <div className="mt-4 space-y-2 text-sm text-gray-700">
-                    <div className="flex items-center gap-2">
+            {/* Details Section - Centered Vertically via flex items-center in parent, and text alignment */}
+            <div className="flex-1 flex flex-col justify-center items-end text-right w-full">
+                <h3 className="font-bold text-lg text-[#006A60] mb-2" style={{fontFamily: "'Tajawal', sans-serif"}}>{announcement.title}</h3>
+                <p className="text-gray-600 text-sm mb-4 leading-relaxed" dir="rtl">{announcement.details || 'Explore Student Clubs Activates through a dedicated website.'}</p>
+                <div className="space-y-2 text-sm text-gray-700 w-full flex flex-col items-end">
+                    <div className="flex items-center gap-2 justify-end">
+                        <span dir="ltr" className="font-medium">{formattedDate}</span>
                         <CalendarDaysIcon className="w-5 h-5 text-gray-500" />
-                        <span dir="ltr">{formattedDate}</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 justify-end">
+                        <span dir="ltr" className="font-medium">{formattedTime}</span>
                         <ClockIcon className="w-5 h-5 text-gray-500" />
-                        <span dir="ltr">{formattedTime}</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 justify-end">
+                        <span dir="rtl">{announcement.location}</span>
                         <LocationMarkerIcon className="w-5 h-5 text-gray-500" />
-                        <span>{announcement.location}</span>
                     </div>
                 </div>
             </div>

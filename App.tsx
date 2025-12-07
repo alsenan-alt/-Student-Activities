@@ -35,9 +35,9 @@ import { DocumentPlusIcon } from './components/icons/DocumentPlusIcon';
 import BulkAnnouncementModal from './components/BulkAnnouncementModal';
 
 // ---------------------------------------------------------------------------
-// الرابط الافتراضي (يمكن تغييره من داخل التطبيق الآن)
+// الرابط الافتراضي (تم التحديث)
 // ---------------------------------------------------------------------------
-const DEFAULT_SOURCE_URL = 'https://api.npoint.io/d0337836668af2914ece';
+const DEFAULT_SOURCE_URL = 'https://api.npoint.io/f2a6f5476c9e5080950e';
 
 export const themePresets: { [key: string]: { name: string; settings: { [key: string]: string } } } = {
   dark: {
@@ -326,9 +326,12 @@ const App: React.FC = () => {
                         
                         // Save to local storage as backup
                         try {
-                            localStorage.setItem('studentActivityData', JSON.stringify(dataToUse));
+                            // We don't want to fail here if quota is exceeded during load
+                            // We just want to try to cache it.
+                             const appData = { links: dataToUse.links, announcements: dataToUse.announcements, themeConfig: dataToUse.themeConfig, adminPassword: dataToUse.adminPassword };
+                             localStorage.setItem('studentActivityData', JSON.stringify(appData));
                         } catch (e) {
-                            console.warn("Could not backup to localStorage", e);
+                            console.warn("Could not backup to localStorage during load (likely quota)", e);
                         }
                         
                         console.log("Data loaded successfully from external source.");
@@ -387,6 +390,7 @@ const App: React.FC = () => {
                 if (isQuotaError) {
                      try {
                          // Fallback: Attempt to save without large base64 strings
+                         console.warn("LocalStorage quota limit reached. Saving lite version...");
                          
                          // 1. Strip images from announcements
                          const liteAnnouncements = announcements.map(ann => {
@@ -412,7 +416,7 @@ const App: React.FC = () => {
                          };
                          
                          localStorage.setItem('studentActivityData', JSON.stringify(liteAppData));
-                         console.warn("LocalStorage quota limit reached. Data saved without high-res images to preserve text data.");
+                         console.log("Lite version saved successfully.");
                      } catch (retryError) {
                          console.error("LocalStorage is full. Unable to save data locally.", retryError);
                      }
