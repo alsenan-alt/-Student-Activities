@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import type { Announcement } from '../types';
 import Modal from './Modal';
 import { DocumentTextIcon } from './icons/DocumentTextIcon';
@@ -30,12 +30,18 @@ const ReportModal: React.FC<ReportModalProps> = ({ announcements, onClose }) => 
     const [selectedClubs, setSelectedClubs] = useState<string[]>([]);
 
     const uniqueClubs = useMemo(() => {
-        const clubs = new Set(announcements.map(a => a.clubName?.trim() || 'بدون نادي'));
+        const clubs = new Set<string>();
+        announcements.forEach(a => {
+            clubs.add(a.clubName?.trim() || 'بدون نادي');
+            if (a.clubName2?.trim()) {
+                clubs.add(a.clubName2.trim());
+            }
+        });
         return Array.from(clubs).sort();
     }, [announcements]);
 
     // Initialize selected clubs to all unique clubs on first render
-    useState(() => {
+    useEffect(() => {
         setSelectedClubs(uniqueClubs);
     }, [uniqueClubs]);
 
@@ -56,7 +62,12 @@ const ReportModal: React.FC<ReportModalProps> = ({ announcements, onClose }) => 
                 return true;
             })
             .filter(ann => selectedCategories.includes(ann.category))
-            .filter(ann => selectedClubs.includes(ann.clubName?.trim() || 'بدون نادي'));
+            .filter(ann => {
+                const c1 = ann.clubName?.trim() || 'بدون نادي';
+                const c2 = ann.clubName2?.trim();
+                // Pass if either club1 is selected OR (club2 exists and is selected)
+                return selectedClubs.includes(c1) || (c2 && selectedClubs.includes(c2));
+            });
     }, [announcements, startDate, endDate, selectedCategories, selectedClubs]);
     
     const handleCategoryChange = (category: 'male' | 'female' | 'all') => {
@@ -185,17 +196,24 @@ const ReportModal: React.FC<ReportModalProps> = ({ announcements, onClose }) => 
                                         <th className="p-2 font-semibold">التاريخ</th>
                                         <th className="p-2 font-semibold">المكان</th>
                                         <th className="p-2 font-semibold">الفئة</th>
+                                        <th className="p-2 font-semibold">النادي</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredAnnouncements.map(ann => (
+                                    {filteredAnnouncements.map(ann => {
+                                         const clubDisplay = [ann.clubName, ann.clubName2]
+                                            .filter(Boolean)
+                                            .join(' + ');
+
+                                        return (
                                         <tr key={ann.id} className="border-b border-[var(--color-border)]">
                                             <td className="p-2">{ann.title}</td>
                                             <td className="p-2 whitespace-nowrap">{new Date(ann.date).toLocaleDateString('ar-EG', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                                             <td className="p-2">{ann.location}</td>
                                             <td className="p-2">{getCategoryText(ann.category)}</td>
+                                            <td className="p-2 text-xs text-[var(--color-text-secondary)]">{clubDisplay}</td>
                                         </tr>
-                                    ))}
+                                    )})}
                                 </tbody>
                             </table>
                         )}

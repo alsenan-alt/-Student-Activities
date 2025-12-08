@@ -65,6 +65,11 @@ const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, userR
     const categoryText = getCategoryText(announcement.category);
     const displayImageUrl = announcement.imageDataUrl || announcement.imageUrl;
 
+    // Construct Club display string
+    const clubDisplay = [announcement.clubName, announcement.clubName2]
+        .filter(Boolean)
+        .join(' + ');
+
     return (
     <div 
         className={`group bg-[var(--color-card-bg)] rounded-xl shadow-md overflow-hidden transition-all duration-300 border border-[var(--color-border)] ${styles.hoverBorder} ${styles.hoverShadow} hover:-translate-y-1 announcement-card-print-container animate-fade-in-up`}
@@ -114,10 +119,10 @@ const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, userR
             {announcement.title}
         </h3>
         
-        {announcement.clubName && (
-            <div className="flex items-center justify-end gap-2 text-sm text-[var(--color-text-secondary)] mb-4">
-                <span>{announcement.clubName}</span>
-                <UsersIcon className="w-4 h-4" />
+        {clubDisplay && (
+            <div className="flex items-center justify-end gap-2 text-sm text-[var(--color-text-secondary)] mb-4" title={clubDisplay}>
+                <span className="truncate max-w-[250px]">{clubDisplay}</span>
+                <UsersIcon className="w-4 h-4 flex-shrink-0" />
             </div>
         )}
 

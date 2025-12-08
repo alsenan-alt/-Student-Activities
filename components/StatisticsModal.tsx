@@ -77,7 +77,6 @@ const TopClubsBarChart: React.FC<{ clubs: [string, { total: number }][] }> = ({ 
 
     return (
         <div className="space-y-3">
-            {/* FIX: Destructuring inside the map body to potentially help with type inference issues. */}
             {top5.map((clubEntry) => {
                 const [name, data] = clubEntry;
                 return (
@@ -111,18 +110,33 @@ const StatisticsModal: React.FC<StatisticsModalProps> = ({ announcements, onClos
             all: announcements.filter(a => a.category === 'all').length,
         };
 
-        const byClub = announcements.reduce((acc, ann) => {
-            const club = ann.clubName?.trim() || 'بدون نادي';
-            if (!acc[club]) {
-                acc[club] = { total: 0, male: 0, female: 0, all: 0 };
-            }
-            acc[club].total++;
-            acc[club][ann.category]++;
-            return acc;
-        }, {} as Record<string, { total: number; male: number; female: number; all: number; }>);
+        // Initialize accumulator with the right type
+        const initialAcc: Record<string, { total: number; male: number; female: number; all: number; }> = {};
 
-        // FIX: Explicitly cast the value from Object.entries to resolve type inference issue.
-        const sortedClubs = Object.entries(byClub).sort((a, b) => (b[1] as { total: number }).total - (a[1] as { total: number }).total);
+        const byClub = announcements.reduce((acc, ann) => {
+            // Helper to process a club name
+            const processClub = (clubRaw: string) => {
+                const club = clubRaw.trim();
+                if (!acc[club]) {
+                    acc[club] = { total: 0, male: 0, female: 0, all: 0 };
+                }
+                acc[club].total++;
+                acc[club][ann.category]++;
+            };
+
+            // Process first club (defaults to 'بدون نادي' if missing)
+            processClub(ann.clubName?.trim() || 'بدون نادي');
+
+            // Process second club if it exists
+            if (ann.clubName2 && ann.clubName2.trim()) {
+                processClub(ann.clubName2);
+            }
+
+            return acc;
+        }, initialAcc);
+
+        // Sort by total events
+        const sortedClubs = Object.entries(byClub).sort((a, b) => b[1].total - a[1].total);
 
         return { total, byCategory, sortedClubs };
     }, [announcements]);

@@ -1,3 +1,4 @@
+
 export type UserRole = 'admin' | 'student';
 
 export interface LinkItem {
@@ -21,6 +22,7 @@ export interface Announcement {
   registrationType: 'link' | 'open';
   registrationUrl?: string;
   clubName?: string;
+  clubName2?: string; // Second club (partner/collaborator)
 }
 
 export type ToastType = 'success' | 'error' | 'info';

@@ -23,6 +23,7 @@ const BulkAnnouncementModal: React.FC<BulkAnnouncementModalProps> = ({ onClose, 
         "date": "2024-12-31T10:00:00",
         "location": "المكان",
         "clubName": "اسم النادي",
+        "clubName2": "اسم النادي الثاني (اختياري)",
         "registrationType": "link (or open)",
         "registrationUrl": "https://example.com/register",
         "imageUrl": "https://example.com/image.jpg"
@@ -34,6 +35,7 @@ const BulkAnnouncementModal: React.FC<BulkAnnouncementModalProps> = ({ onClose, 
         "date": "2024-12-30T14:00:00",
         "location": "مبنى 5",
         "clubName": "النادي الثقافي",
+        "clubName2": "",
         "registrationType": "open",
         "imageUrl": ""
       }
@@ -90,6 +92,7 @@ const BulkAnnouncementModal: React.FC<BulkAnnouncementModalProps> = ({ onClose, 
             date: new Date(item.date).toISOString(), // Ensure ISO format
             location: item.location,
             clubName: item.clubName || undefined,
+            clubName2: item.clubName2 || undefined,
             registrationType: item.registrationType === 'open' ? 'open' : 'link',
             registrationUrl: item.registrationUrl || undefined,
             imageUrl: item.imageUrl || '', // Fallback for image

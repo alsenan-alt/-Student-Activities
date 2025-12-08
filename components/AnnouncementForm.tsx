@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import type { Announcement } from '../types';
 import { XIcon } from './icons/XIcon';
@@ -20,6 +21,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
   const [registrationType, setRegistrationType] = useState<'link' | 'open'>('link');
   const [registrationUrl, setRegistrationUrl] = useState('');
   const [clubName, setClubName] = useState('');
+  const [clubName2, setClubName2] = useState('');
   const [error, setError] = useState('');
 
   const isEditing = !!existingAnnouncement;
@@ -47,6 +49,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
       setRegistrationType(existingAnnouncement.registrationType || 'link');
       setRegistrationUrl(existingAnnouncement.registrationUrl || '');
       setClubName(existingAnnouncement.clubName || '');
+      setClubName2(existingAnnouncement.clubName2 || '');
     }
   }, [existingAnnouncement, isEditing]);
 
@@ -123,6 +126,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
         registrationType,
         registrationUrl: registrationType === 'link' ? registrationUrl : undefined,
         clubName: clubName.trim() || undefined,
+        clubName2: clubName2.trim() || undefined,
     }, isEditing ? existingAnnouncement.id : null);
   };
 
@@ -151,11 +155,20 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ onSave, onClose, ex
                   </select>
               </div>
           </div>
-          <div>
-            <label htmlFor="ann-club-name" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">اسم النادي (اختياري)</label>
-            <input id="ann-club-name" type="text" placeholder="مثال: نادي البرمجة" value={clubName} onChange={(e) => setClubName(e.target.value)}
-              className="w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)]" />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label htmlFor="ann-club-name" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">اسم النادي الأول (اختياري)</label>
+                <input id="ann-club-name" type="text" placeholder="مثال: نادي البرمجة" value={clubName} onChange={(e) => setClubName(e.target.value)}
+                className="w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)]" />
+            </div>
+            <div>
+                <label htmlFor="ann-club-name-2" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">اسم النادي الثاني/المتعاون (اختياري)</label>
+                <input id="ann-club-name-2" type="text" placeholder="مثال: نادي الفنون" value={clubName2} onChange={(e) => setClubName2(e.target.value)}
+                className="w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-accent)]" />
+            </div>
           </div>
+
           <div>
               <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">صورة الإعلان</label>
               <div className="p-3 bg-[var(--color-bg)] border-2 border-dashed border-[var(--color-border)] rounded-md space-y-3">
