@@ -65,11 +65,6 @@ const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, userR
     const categoryText = getCategoryText(announcement.category);
     const displayImageUrl = announcement.imageDataUrl || announcement.imageUrl;
 
-    // Construct Club display string
-    const clubDisplay = [announcement.clubName, announcement.clubName2]
-        .filter(Boolean)
-        .join(' + ');
-
     return (
     <div 
         className={`group bg-[var(--color-card-bg)] rounded-xl shadow-md overflow-hidden transition-all duration-300 border border-[var(--color-border)] ${styles.hoverBorder} ${styles.hoverShadow} hover:-translate-y-1 announcement-card-print-container animate-fade-in-up`}
@@ -119,10 +114,24 @@ const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, userR
             {announcement.title}
         </h3>
         
-        {clubDisplay && (
-            <div className="flex items-center justify-end gap-2 text-sm text-[var(--color-text-secondary)] mb-4" title={clubDisplay}>
-                <span className="truncate max-w-[250px]">{clubDisplay}</span>
-                <UsersIcon className="w-4 h-4 flex-shrink-0" />
+        {(announcement.clubName || announcement.clubName2) && (
+            <div className="flex items-start justify-end gap-2 text-sm text-[var(--color-text-secondary)] mb-4">
+                <div className="flex flex-col items-end w-full">
+                    {announcement.clubName && (
+                        <span className="truncate max-w-full font-bold text-[var(--color-text-primary)]" title={announcement.clubName}>
+                            {announcement.clubName}
+                        </span>
+                    )}
+                    {announcement.clubName2 && (
+                        <div className="flex flex-wrap items-center justify-end gap-1 mt-1 w-full">
+                             <span className="text-xs text-[var(--color-text-secondary)] whitespace-nowrap">بالتعاون مع</span>
+                             <span className="truncate max-w-full font-bold text-[var(--color-text-primary)]" title={announcement.clubName2}>
+                                {announcement.clubName2}
+                            </span>
+                        </div>
+                    )}
+                </div>
+                <UsersIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
             </div>
         )}
 
