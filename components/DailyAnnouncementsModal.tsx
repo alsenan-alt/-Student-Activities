@@ -75,8 +75,8 @@ const NewsletterAnnouncementItem: React.FC<{
     };
 
     return (
-        <div className="flex flex-col sm:flex-row gap-6 mb-8 items-center text-gray-800 group/row" dir="ltr">
-            {/* Image Section - now on the Left (in LTR mode for correct date/time display) */}
+        <div className="flex flex-col sm:flex-row gap-6 mb-8 items-center text-gray-800 group/row" dir="rtl">
+            {/* Image Section - First child, so it appears on the Right in RTL */}
             <div className={containerClasses}>
                  <img
                     src={displayImageUrl}
@@ -111,22 +111,22 @@ const NewsletterAnnouncementItem: React.FC<{
                  </div>
             </div>
 
-            {/* Details Section - Centered Vertically via flex items-center in parent, and text alignment */}
-            <div className="flex-1 flex flex-col justify-center items-end text-right w-full">
+            {/* Details Section - Second child, appears on Left. Text aligned Right towards the image. */}
+            <div className="flex-1 flex flex-col justify-center items-start text-right w-full">
                 <h3 className="font-bold text-lg text-[#006A60] mb-2" style={{fontFamily: "'Tajawal', sans-serif"}}>{announcement.title}</h3>
-                <p className="text-gray-600 text-sm mb-4 leading-relaxed" dir="rtl">{announcement.details || 'Explore Student Clubs Activates through a dedicated website.'}</p>
-                <div className="space-y-2 text-sm text-gray-700 w-full flex flex-col items-end">
-                    <div className="flex items-center gap-2 justify-end">
-                        <span dir="ltr" className="font-medium">{formattedDate}</span>
+                <p className="text-gray-600 text-sm mb-4 leading-relaxed">{announcement.details || 'Explore Student Clubs Activates through a dedicated website.'}</p>
+                <div className="space-y-2 text-sm text-gray-700 w-full flex flex-col items-start">
+                    <div className="flex items-center gap-2 justify-start">
                         <CalendarDaysIcon className="w-5 h-5 text-gray-500" />
+                        <span dir="ltr" className="font-medium">{formattedDate}</span>
                     </div>
-                    <div className="flex items-center gap-2 justify-end">
-                        <span dir="ltr" className="font-medium">{formattedTime}</span>
+                    <div className="flex items-center gap-2 justify-start">
                         <ClockIcon className="w-5 h-5 text-gray-500" />
+                        <span dir="ltr" className="font-medium">{formattedTime}</span>
                     </div>
-                    <div className="flex items-center gap-2 justify-end">
-                        <span dir="rtl">{announcement.location}</span>
+                    <div className="flex items-center gap-2 justify-start">
                         <LocationMarkerIcon className="w-5 h-5 text-gray-500" />
+                        <span>{announcement.location}</span>
                     </div>
                 </div>
             </div>
