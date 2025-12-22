@@ -37,7 +37,7 @@ import BulkAnnouncementModal from './components/BulkAnnouncementModal';
 // ---------------------------------------------------------------------------
 // الرابط الافتراضي (تم التحديث)
 // ---------------------------------------------------------------------------
-const DEFAULT_SOURCE_URL = 'https://api.npoint.io/f2a6f5476c9e5080950e';
+const DEFAULT_SOURCE_URL = 'https://api.npoint.io/3b3afc6b005f189d1dfe';
 
 export const themePresets: { [key: string]: { name: string; settings: { [key: string]: string } } } = {
   dark: {
